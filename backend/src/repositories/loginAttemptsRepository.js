@@ -17,7 +17,7 @@ const countRecentFailedAttempts = async ({ email, source_ip, windowMs }) => {
        AND (email = ? OR source_ip = ?)`,
     [windowMs * 1000, email, source_ip]
   );
-  return rows[0]?.failed_count || 0;
+  return Number(rows[0]?.failed_count || 0);
 };
 
 export default { logAttempt, countRecentFailedAttempts };

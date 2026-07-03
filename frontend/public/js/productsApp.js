@@ -13,23 +13,37 @@ const showMessage = (element, message, isError = false) => {
 };
 
 const renderProducts = (products) => {
-  productList.innerHTML = '';
+  productList.replaceChildren();
   if (!products.length) {
-    productList.innerHTML = '<p>Nenhum produto encontrado.</p>';
+    const emptyMessage = document.createElement('p');
+    emptyMessage.textContent = 'Nenhum produto encontrado.';
+    productList.appendChild(emptyMessage);
     return;
   }
 
   products.forEach((product) => {
     const item = document.createElement('div');
     item.className = 'product-card';
-    item.innerHTML = `
-      <h3>${product.nome}</h3>
-      <p><strong>Código de barras:</strong> ${product.codigo_barras || 'Não informado'}</p>
-      <p><strong>Categoria:</strong> ${product.categoria || 'Sem categoria'}</p>
-      <p><strong>Preço:</strong> R$ ${Number(product.preco_venda).toFixed(2)}</p>
-      <p><strong>Estoque:</strong> ${Number(product.estoque_atual).toFixed(2)}</p>
-      <p><strong>Status:</strong> ${product.ativo ? 'Ativo' : 'Inativo'}</p>
-    `;
+
+    const title = document.createElement('h3');
+    title.textContent = product.nome;
+    item.appendChild(title);
+
+    const details = [
+      ['Código de barras', product.codigo_barras || 'Não informado'],
+      ['Categoria', product.categoria || 'Sem categoria'],
+      ['Preço', `R$ ${Number(product.preco_venda).toFixed(2)}`],
+      ['Estoque', Number(product.estoque_atual).toFixed(2)],
+      ['Status', product.ativo ? 'Ativo' : 'Inativo']
+    ];
+
+    details.forEach(([label, value]) => {
+      const line = document.createElement('p');
+      const labelElement = document.createElement('strong');
+      labelElement.textContent = `${label}: `;
+      line.append(labelElement, document.createTextNode(value));
+      item.appendChild(line);
+    });
     productList.appendChild(item);
   });
 };

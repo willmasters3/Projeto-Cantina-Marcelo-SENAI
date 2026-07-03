@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3000/api/v1';
+const API_BASE_URL = '/api/v1';
 
 const request = async (path, options = {}) => {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -9,12 +9,14 @@ const request = async (path, options = {}) => {
     ...options
   });
 
-  const data = await response.json().catch(() => null);
+  const data = response.status === 204 ? null : await response.json().catch(() => null);
   if (!response.ok) {
     const message = data?.error || data?.message || 'Erro na requisição';
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
-  return data.data || data;
+  return data;
 };
 
 const login = async (payload) => request('/auth/login', {

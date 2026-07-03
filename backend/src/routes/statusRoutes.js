@@ -3,6 +3,6 @@ import statusController from '../controllers/statusController.js';
 
 const router = Router();
 
-router.get('/status', statusController.getStatus);
+router.get('/', statusController.getStatus);
 
 export default router;

@@ -6,11 +6,18 @@ const requireAuth = async (req, res, next) => {
   try {
     const token = req.cookies?.[authConfig.cookieName] || null;
     if (!token) {
+      if (req.originalUrl.startsWith('/app')) {
+        return res.redirect('/login');
+      }
       throw new HttpError(401, 'Autenticação necessária');
     }
 
     const user = await authService.getUserBySessionToken(token);
-    if (!user || !user.ativo) {
+    if (!user) {
+      res.clearCookie(authConfig.cookieName, { path: '/' });
+      if (req.originalUrl.startsWith('/app')) {
+        return res.redirect('/login');
+      }
       throw new HttpError(401, 'Autenticação necessária');
     }
 
@@ -23,7 +30,7 @@ const requireAuth = async (req, res, next) => {
 
 const requireRole = (allowedRoles = []) => {
   return (req, res, next) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
+    if (!req.user || !allowedRoles.includes(req.user.role.slug)) {
       return next(new HttpError(403, 'Permissão negada'));
     }
     return next();

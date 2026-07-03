@@ -8,8 +8,26 @@ import HttpError from '../utils/httpError.js';
 
 const createLoginToken = () => crypto.randomBytes(32).toString('hex');
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+const dummyPasswordHash = '$2b$12$Z8Y1kT1qJqQxV5QpY8qkI.2an6rUoMZfV8I2ZmdoYwXr6vFYViYxK';
+
+const toPublicUser = (user) => ({
+  id: user.id,
+  nome: user.nome,
+  email: user.email,
+  role: {
+    slug: user.role_slug,
+    nome: user.role_nome
+  }
+});
+
+const validateCredentialsInput = (email, password) => {
+  if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
+    throw new HttpError(400, 'E-mail e senha são obrigatórios');
+  }
+};
 
 const login = async ({ email, password, ipAddress, userAgent }) => {
+  validateCredentialsInput(email, password);
   const normalizedEmail = email.trim().toLowerCase();
   const user = await usersRepository.findByEmail(normalizedEmail);
 
@@ -23,20 +41,26 @@ const login = async ({ email, password, ipAddress, userAgent }) => {
     throw new HttpError(429, 'Muitas tentativas de login. Tente novamente mais tarde.');
   }
 
-  await loginAttemptsRepository.logAttempt({
-    user_id: user ? user.id : null,
-    email: normalizedEmail,
-    source_ip: ipAddress,
-    successful: 0,
-    reason: 'invalid_credentials'
-  });
+  const passwordMatch = await bcrypt.compare(
+    password,
+    user?.password_hash || dummyPasswordHash
+  );
+  const accountLocked = user?.locked_until && new Date(user.locked_until) > new Date();
+  const loginAllowed = user && user.ativo && !accountLocked && passwordMatch && user.role_slug;
 
-  if (!user || !user.ativo) {
-    throw new HttpError(401, 'Credenciais inválidas');
-  }
+  if (!loginAllowed) {
+    await loginAttemptsRepository.logAttempt({
+      user_id: user ? user.id : null,
+      email: normalizedEmail,
+      source_ip: ipAddress,
+      successful: 0,
+      reason: 'invalid_credentials'
+    });
 
-  const passwordMatch = await bcrypt.compare(password, user.password_hash);
-  if (!passwordMatch) {
+    if (accountLocked) {
+      throw new HttpError(423, 'Acesso temporariamente bloqueado. Tente novamente mais tarde.');
+    }
+
     throw new HttpError(401, 'Credenciais inválidas');
   }
 
@@ -61,10 +85,11 @@ const login = async ({ email, password, ipAddress, userAgent }) => {
     reason: 'login_success'
   });
 
-  return { token, user: { id: user.id, nome: user.nome, email: user.email, role: user.role_slug } };
+  return { token, user: toPublicUser(user) };
 };
 
-const logout = async (tokenHash) => {
+const logout = async (token) => {
+  const tokenHash = hashToken(token);
   await authSessionsRepository.invalidateSession(tokenHash);
 };
 
@@ -74,7 +99,11 @@ const getUserBySessionToken = async (token) => {
   if (!session) {
     return null;
   }
-  return usersRepository.findById(session.user_id);
+  const user = await usersRepository.findById(session.user_id);
+  if (!user || !user.ativo || (user.locked_until && new Date(user.locked_until) > new Date())) {
+    return null;
+  }
+  return toPublicUser(user);
 };
 
 export default { login, logout, getUserBySessionToken };

@@ -13,7 +13,6 @@ const validateProductPayload = (req) => {
     codigo_barras,
     nome,
     preco_venda,
-    custo,
     estoque_atual,
     estoque_minimo,
     ativo

@@ -116,3 +116,206 @@ textarea {
   margin-bottom: 0.5rem;
 }
 
+a {
+  color: #1d4ed8;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.eyebrow {
+  margin-bottom: 0.5rem;
+  color: #2563eb;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.auth-container {
+  margin-top: max(3rem, 10vh);
+}
+
+.auth-form {
+  margin-top: 1.5rem;
+  text-align: left;
+}
+
+.auth-form button {
+  width: 100%;
+}
+
+.auth-container .message {
+  min-height: 1.5rem;
+}
+
+.public-link {
+  display: inline-block;
+  margin-top: 0.5rem;
+}
+
+.admin-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.side-menu {
+  padding: 1.75rem 1rem;
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.side-menu .brand {
+  margin: 0 0.75rem 2rem;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.side-menu nav {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.side-menu a {
+  padding: 0.8rem 0.9rem;
+  border-radius: 9px;
+  color: #cbd5e1;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.side-menu a:hover,
+.side-menu a.active {
+  background: #1e293b;
+  color: #ffffff;
+}
+
+.side-menu a[hidden] {
+  display: none;
+}
+
+.main-content {
+  min-width: 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.topbar button {
+  padding: 0.65rem 1rem;
+  background: #334155;
+}
+
+.topbar button:hover {
+  background: #0f172a;
+}
+
+.page-content {
+  width: min(100% - 3rem, 1080px);
+  margin: 0 auto;
+  padding: 2.5rem 0 4rem;
+}
+
+.page-content > h1 {
+  margin-bottom: 1.5rem;
+}
+
+.page-content .admin-form,
+.module-placeholder {
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
+}
+
+.module-placeholder h2 {
+  margin-bottom: 0.75rem;
+}
+
+.module-placeholder p,
+.product-card p {
+  margin-bottom: 0.45rem;
+}
+
+#productSearchForm {
+  display: flex;
+  gap: 0.75rem;
+}
+
+#productSearchForm input {
+  margin-bottom: 0;
+}
+
+#productSearchForm button {
+  padding-block: 0.8rem;
+}
+
+.monitor-container {
+  max-width: 760px;
+}
+
+.monitor-card {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  background: #eff6ff;
+}
+
+.monitor-card h2 {
+  margin-bottom: 0.75rem;
+}
+
+.monitor-card p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 760px) {
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .side-menu {
+    padding: 1rem;
+  }
+
+  .side-menu .brand {
+    margin: 0 0 1rem;
+  }
+
+  .side-menu nav {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+  }
+
+  .side-menu a {
+    flex: 0 0 auto;
+  }
+
+  .topbar {
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .page-content {
+    width: min(100% - 2rem, 1080px);
+    padding-top: 1.5rem;
+  }
+
+  #productSearchForm {
+    display: grid;
+  }
+}
+

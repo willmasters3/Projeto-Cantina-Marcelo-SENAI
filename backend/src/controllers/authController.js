@@ -1,5 +1,17 @@
 import authService from '../services/authService.js';
 import authConfig from '../config/auth.js';
+import env from '../config/env.js';
+
+const getCookieOptions = () => ({
+  httpOnly: true,
+  sameSite: 'lax',
+  path: '/',
+  secure: env.nodeEnv === 'production'
+});
+
+const getHomePath = (roleSlug) => (
+  roleSlug === authConfig.roles.viewer ? '/app/relatorios' : '/app/caixa'
+);
 
 const login = async (req, res, next) => {
   try {
@@ -11,19 +23,14 @@ const login = async (req, res, next) => {
       userAgent: req.headers['user-agent'] || null
     });
 
-    const cookieOptions = {
-      httpOnly: true,
-      sameSite: 'lax',
-      maxAge: authConfig.cookieMaxAgeMs,
-      path: '/'
-    };
-
-    if (process.env.NODE_ENV === 'production') {
-      cookieOptions.secure = true;
-    }
+    const cookieOptions = { ...getCookieOptions(), maxAge: authConfig.cookieMaxAgeMs };
 
     res.cookie(authConfig.cookieName, token, cookieOptions);
-    res.status(200).json({ data: user });
+    res.status(200).json({
+      success: true,
+      user,
+      redirectTo: getHomePath(user.role.slug)
+    });
   } catch (error) {
     next(error);
   }
@@ -35,7 +42,7 @@ const logout = async (req, res, next) => {
     if (token) {
       await authService.logout(token);
     }
-    res.clearCookie(authConfig.cookieName, { path: '/' });
+    res.clearCookie(authConfig.cookieName, getCookieOptions());
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -44,7 +51,7 @@ const logout = async (req, res, next) => {
 
 const me = async (req, res, next) => {
   try {
-    res.status(200).json({ data: req.user });
+    res.status(200).json({ success: true, user: req.user });
   } catch (error) {
     next(error);
   }

@@ -32,7 +32,8 @@ app.use(
 );
 app.use(morgan('dev'));
 
-app.use(express.static(frontendPath));
+app.use('/css', express.static(path.join(frontendPath, 'css'), { index: false }));
+app.use('/js', express.static(path.join(frontendPath, 'js'), { index: false }));
 app.use('/', pageRoutes);
 
 app.use('/api/v1/auth', authRoutes);

@@ -18,43 +18,39 @@ Projeto Cantina é uma aplicação monolítica modular em Node.js com Express, s
 
 ## Instalação
 
-1. No diretório do projeto, instale dependências do backend:
+1. No diretório do projeto, instale as dependências do backend:
 
 ```bash
 cd backend
 npm install
 ```
 
-2. Crie o arquivo `.env` baseado em `.env.example` e configure-o com seus dados locais.
+2. Configure `backend/.env` a partir de `backend/.env.example`, sem versionar credenciais.
 
-## Exemplo `.env`
+3. Crie o primeiro administrador de forma interativa. A senha não é exibida no terminal:
 
-```env
-NODE_ENV=development
-API_PORT=3000
-CORS_ORIGIN=http://localhost:5500
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_database_password
-DB_NAME=projeto_cantina
+```bash
+cd backend
+npm run create:admin
 ```
-
-> Não coloque senhas ou dados sensíveis em arquivos commitados.
 
 ## Como iniciar
 
 - Ambiente de desenvolvimento:
 
 ```bash
+cd backend
 npm run dev
 ```
 
 - Execução normal:
 
 ```bash
+cd backend
 npm start
 ```
+
+O sistema fica disponível em `http://localhost:3000`.
 
 ## Testar a rota de status
 
@@ -64,9 +60,21 @@ A rota de teste está disponível em:
 
 Ela retorna o status do servidor e do banco de dados.
 
-## Frontend
+## Páginas
 
-Abra `frontend/public/index.html` diretamente no navegador ou sirva a pasta `frontend/public` com um servidor local para testar o botão "Testar sistema".
+- Login: `http://localhost:3000/login`
+- Monitor público: `http://localhost:3000/monitor`
+- Área interna: `http://localhost:3000/app`
+
+O frontend deve ser acessado pelo Express; não abra os arquivos HTML diretamente.
+
+## Verificações locais
+
+```bash
+cd backend
+npm run lint
+npm test
+```
 
 ## Arquitetura
 

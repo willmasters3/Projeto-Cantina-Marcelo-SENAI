@@ -1,108 +1,195 @@
-import readline from 'readline';
-import { stdin as input, stdout as output } from 'process';
 import bcrypt from 'bcrypt';
-import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import mysql from 'mysql2/promise';
+import path from 'node:path';
+import { stdin as input, stdout as output } from 'node:process';
+import { createInterface } from 'node:readline/promises';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-const rl = readline.createInterface({ input, output });
+const defaultRoles = [
+  ['ADMINISTRADOR', 'Administrador', 'Acesso total ao sistema'],
+  ['OPERADOR_CAIXA', 'Operador de Caixa', 'Acesso a caixa, clientes e fiado'],
+  ['CONSULTA', 'Consulta', 'Acesso apenas a relatórios e consultas']
+];
 
-const question = (prompt, hidden = false) => {
-  return new Promise((resolve) => {
-    if (!hidden) {
-      rl.question(prompt, resolve);
-      return;
-    }
+class SafeError extends Error {}
 
-    const stdin = process.openStdin();
+const ask = async (prompt) => {
+  const rl = createInterface({ input, output });
+  try {
+    return await rl.question(prompt);
+  } finally {
+    rl.close();
+  }
+};
+
+const askHidden = (prompt) => {
+  if (!input.isTTY || typeof input.setRawMode !== 'function') {
+    throw new SafeError('Execute este comando em um terminal interativo.');
+  }
+
+  return new Promise((resolve, reject) => {
+    let value = '';
     output.write(prompt);
-    const onData = (char) => {
-      char = char + '';
-      switch (char) {
-        case '\n':
-        case '\r':
-        case '\u0004':
-          stdin.removeListener('data', onData);
-          output.write('\n');
-          break;
-        default:
-          output.write('*');
-          break;
+    input.setEncoding('utf8');
+    input.setRawMode(true);
+    input.resume();
+
+    const finish = (error = null) => {
+      input.removeListener('data', onData);
+      input.setRawMode(false);
+      input.pause();
+      output.write('\n');
+      if (error) reject(error);
+      else resolve(value);
+    };
+
+    const onData = (chunk) => {
+      for (const character of chunk) {
+        if (character === '\u0003') {
+          finish(new SafeError('Operação cancelada.'));
+          return;
+        }
+        if (character === '\r' || character === '\n' || character === '\u0004') {
+          finish();
+          return;
+        }
+        if (character === '\u0008' || character === '\u007f') {
+          value = value.slice(0, -1);
+          continue;
+        }
+        if (character >= ' ') value += character;
       }
     };
 
-    stdin.on('data', onData);
-    rl.question('', (value) => {
-      resolve(value);
-    });
+    input.on('data', onData);
   });
 };
 
-const init = async () => {
-  try {
-    const nome = await question('Nome do administrador: ');
-    const email = await question('Email do administrador: ');
-    const senha = await question('Senha do administrador: ', true);
-    const senhaConfirm = await question('Confirme a senha: ', true);
+const validateInput = ({ nome, email, senha, confirmacao }) => {
+  if (!nome.trim()) {
+    throw new SafeError('O nome é obrigatório.');
+  }
 
-    if (!nome.trim() || !email.trim() || !senha.trim()) {
-      throw new Error('Nome, email e senha são obrigatórios.');
-    }
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    throw new SafeError('Informe um e-mail válido.');
+  }
 
-    if (senha !== senhaConfirm) {
-      throw new Error('As senhas não coincidem.');
-    }
+  const strongPassword = senha.length >= 10
+    && /[a-z]/.test(senha)
+    && /[A-Z]/.test(senha)
+    && /\d/.test(senha)
+    && /[^\w\s]/.test(senha);
 
-    const hashedPassword = await bcrypt.hash(senha, 12);
+  if (!strongPassword) {
+    throw new SafeError(
+      'A senha deve ter ao menos 10 caracteres, com maiúscula, minúscula, número e símbolo.'
+    );
+  }
 
-    const connection = await mysql.createConnection({
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME
-    });
+  if (senha !== confirmacao) {
+    throw new SafeError('A confirmação da senha não confere.');
+  }
 
-    await connection.beginTransaction();
+  return { nome: nome.trim(), email: normalizedEmail };
+};
 
-    const [roles] = await connection.query(`SELECT id, slug FROM roles WHERE slug IN ('ADMINISTRADOR', 'OPERADOR_CAIXA', 'CONSULTA')`);
-    const hasAdmin = roles.some((role) => role.slug === 'ADMINISTRADOR');
+const getDatabaseConfig = () => {
+  const requiredVariables = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
+  if (requiredVariables.some((variable) => !process.env[variable])) {
+    throw new SafeError('A configuração do banco de dados está incompleta.');
+  }
 
-    if (!hasAdmin) {
+  return {
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT),
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME
+  };
+};
+
+const ensureDefaultRoles = async (connection) => {
+  const slugs = defaultRoles.map(([slug]) => slug);
+  const [existingRoles] = await connection.query(
+    'SELECT slug FROM roles WHERE slug IN (?, ?, ?)',
+    slugs
+  );
+  const existingSlugs = new Set(existingRoles.map((role) => role.slug));
+
+  for (const [slug, nome, descricao] of defaultRoles) {
+    if (!existingSlugs.has(slug)) {
       await connection.query(
-        `INSERT INTO roles (slug, nome, descricao)
-         VALUES
-         ('ADMINISTRADOR', 'Administrador', 'Acesso total ao sistema'),
-         ('OPERADOR_CAIXA', 'Operador de Caixa', 'Acesso a caixa, clientes e fiado'),
-         ('CONSULTA', 'Consulta', 'Acesso apenas a relatórios e consultas')`
+        'INSERT INTO roles (slug, nome, descricao) VALUES (?, ?, ?)',
+        [slug, nome, descricao]
       );
     }
+  }
+};
 
-    const [[adminRole]] = await connection.query(`SELECT id FROM roles WHERE slug = 'ADMINISTRADOR' LIMIT 1`);
+const createAdministrator = async () => {
+  let connection;
+  let transactionStarted = false;
 
-    const [existingUsers] = await connection.query('SELECT id FROM users WHERE email = ?', [email.trim()]);
+  try {
+    const nomeInput = await ask('Nome do administrador: ');
+    const emailInput = await ask('E-mail do administrador: ');
+    const senha = await askHidden('Senha do administrador: ');
+    const confirmacao = await askHidden('Confirme a senha: ');
+    const { nome, email } = validateInput({
+      nome: nomeInput,
+      email: emailInput,
+      senha,
+      confirmacao
+    });
+    const passwordHash = await bcrypt.hash(senha, 12);
+
+    connection = await mysql.createConnection(getDatabaseConfig());
+    await connection.beginTransaction();
+    transactionStarted = true;
+    await ensureDefaultRoles(connection);
+
+    const [existingUsers] = await connection.query(
+      'SELECT id FROM users WHERE LOWER(email) = ? LIMIT 1',
+      [email]
+    );
     if (existingUsers.length > 0) {
-      throw new Error('Já existe um usuário com esse email.');
+      throw new SafeError('Já existe um usuário com esse e-mail.');
+    }
+
+    const [[adminRole]] = await connection.query(
+      'SELECT id FROM roles WHERE slug = ? LIMIT 1',
+      ['ADMINISTRADOR']
+    );
+    if (!adminRole) {
+      throw new Error('Administrator role was not created');
     }
 
     await connection.query(
       `INSERT INTO users (nome, email, password_hash, role_id, ativo)
        VALUES (?, ?, ?, ?, 1)`,
-      [nome.trim(), email.trim(), hashedPassword, adminRole.id]
+      [nome, email, passwordHash, adminRole.id]
     );
-
     await connection.commit();
-    console.log('\nAdministrador criado com sucesso.');
-    process.exit(0);
+    transactionStarted = false;
+    output.write('Administrador criado com sucesso.\n');
   } catch (error) {
-    console.error('\nErro:', error.message);
-    process.exit(1);
+    if (connection && transactionStarted) {
+      await connection.rollback().catch(() => {});
+    }
+    const message = error instanceof SafeError
+      ? error.message
+      : 'Não foi possível criar o administrador. Verifique a configuração e a conexão com o banco.';
+    output.write(`Erro: ${message}\n`);
+    process.exitCode = 1;
+  } finally {
+    if (connection) await connection.end().catch(() => {});
   }
 };
 
-init();
+createAdministrator();

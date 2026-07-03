@@ -8,15 +8,18 @@
 </head>
 <body>
   <main class="container auth-container">
-    <h1>Login</h1>
+    <p class="eyebrow">Projeto Cantina</p>
+    <h1>Acesso ao sistema</h1>
+    <p>Entre com suas credenciais para acessar a área interna.</p>
     <form id="loginForm" class="auth-form">
-      <label for="loginEmail">Email</label>
-      <input id="loginEmail" type="email" required />
+      <label for="loginEmail">E-mail</label>
+      <input id="loginEmail" name="email" type="email" autocomplete="username" required autofocus />
       <label for="loginPassword">Senha</label>
-      <input id="loginPassword" type="password" required />
+      <input id="loginPassword" name="password" type="password" autocomplete="current-password" required />
       <button type="submit">Entrar</button>
     </form>
-    <p id="loginMessage" class="message"></p>
+    <p id="loginMessage" class="message" aria-live="polite"></p>
+    <a class="public-link" href="/monitor">Ir para o autoatendimento</a>
   </main>
   <script type="module" src="../js/loginApp.js"></script>
 </body>

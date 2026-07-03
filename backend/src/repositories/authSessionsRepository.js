@@ -11,7 +11,10 @@ const createSession = async ({ user_id, token_hash, expires_at, ip_address, user
 
 const findByTokenHash = async (tokenHash) => {
   const [rows] = await pool.query(
-    `SELECT * FROM auth_sessions WHERE token_hash = ? AND invalidated_at IS NULL AND expires_at > NOW()`,
+    `SELECT id, user_id, expires_at
+     FROM auth_sessions
+     WHERE token_hash = ? AND invalidated_at IS NULL AND expires_at > NOW()
+     LIMIT 1`,
     [tokenHash]
   );
   return rows[0] || null;
@@ -19,21 +22,13 @@ const findByTokenHash = async (tokenHash) => {
 
 const invalidateSession = async (tokenHash) => {
   await pool.query(
-    `UPDATE auth_sessions SET invalidated_at = CURRENT_TIMESTAMP WHERE token_hash = ?`,
+    'UPDATE auth_sessions SET invalidated_at = CURRENT_TIMESTAMP WHERE token_hash = ?',
     [tokenHash]
-  );
-};
-
-const invalidateUserSessions = async (userId) => {
-  await pool.query(
-    `UPDATE auth_sessions SET invalidated_at = CURRENT_TIMESTAMP WHERE user_id = ?`,
-    [userId]
   );
 };
 
 export default {
   createSession,
   findByTokenHash,
-  invalidateSession,
-  invalidateUserSessions
+  invalidateSession
 };
