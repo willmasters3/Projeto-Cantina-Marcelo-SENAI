@@ -277,6 +277,71 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
       assert.match(productsScript, /adminApi\.getProductByBarcode\(barcode\)/);
     });
 
+    await t.test('mantém o CSS modular, sem estilos inline e com main apenas agregador', async () => {
+      const cssPath = path.join(frontendPath, 'css');
+      const expectedCssFiles = [
+        'base/reset.css',
+        'base/variables.css',
+        'base/typography.css',
+        'base/global.css',
+        'layout/app-shell.css',
+        'layout/sidebar.css',
+        'layout/topbar.css',
+        'components/buttons.css',
+        'components/forms.css',
+        'components/tables.css',
+        'components/alerts.css',
+        'components/cards.css',
+        'components/modal.css',
+        'pages/login.css',
+        'pages/monitor.css',
+        'pages/caixa.css',
+        'pages/products.css',
+        'pages/categories.css',
+        'pages/clients.css',
+        'pages/estoque.css',
+        'pages/fiado.css',
+        'pages/reports.css',
+        'pages/home.css',
+        'pages/dashboard.css',
+        'pages/settings.css'
+      ];
+      await Promise.all(expectedCssFiles.map((file) => fs.access(path.join(cssPath, file))));
+
+      const mainCss = await fs.readFile(path.join(cssPath, 'main.css'), 'utf8');
+      const mainCssLines = mainCss.split(/\r?\n/).filter((line) => line.trim());
+      assert.ok(mainCssLines.every((line) => line.startsWith('@import url(')));
+      assert.doesNotMatch(mainCss, /[{}]/);
+      assert.doesNotMatch(mainCss, /pages\//);
+
+      const pageStyles = new Map([
+        ['index.html', 'css/pages/home.css'],
+        ['monitor.html', 'css/pages/monitor.css'],
+        ['app/login.html', '../css/pages/login.css'],
+        ['app/dashboard.html', '../css/pages/dashboard.css'],
+        ['app/caixa.html', '../css/pages/caixa.css'],
+        ['app/produtos.html', '../css/pages/products.css'],
+        ['app/categorias.html', '../css/pages/categories.css'],
+        ['app/clientes.html', '../css/pages/clients.css'],
+        ['app/estoque.html', '../css/pages/estoque.css'],
+        ['app/fiado.html', '../css/pages/fiado.css'],
+        ['app/relatorios.html', '../css/pages/reports.css'],
+        ['app/configuracoes.html', '../css/pages/settings.css']
+      ]);
+      const htmlSources = await Promise.all([...pageStyles].map(async ([htmlFile, pageStyle]) => {
+        const source = await fs.readFile(path.join(frontendPath, htmlFile), 'utf8');
+        assert.match(source, /css\/main\.css/);
+        assert.ok(source.includes(`href="${pageStyle}"`));
+        return source;
+      }));
+      assert.doesNotMatch(htmlSources.join('\n'), /\sstyle\s*=/i);
+
+      const cssSources = await Promise.all(expectedCssFiles
+        .concat('main.css')
+        .map((file) => fs.readFile(path.join(cssPath, file), 'utf8')));
+      assert.doesNotMatch(cssSources.join('\n'), /!important/i);
+    });
+
     await t.test('formata preço e custo em centavos sem alterar a API', async () => {
       const currencyModuleSource = await fs.readFile(
         path.join(frontendPath, 'js/currencyInput.js'),

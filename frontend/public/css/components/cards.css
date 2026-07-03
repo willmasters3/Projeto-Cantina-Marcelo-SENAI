@@ -1,0 +1,28 @@
+.card {
+  margin-top: var(--space-7);
+  padding: var(--space-7);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-xl);
+  text-align: left;
+}
+
+.card h2 {
+  margin-bottom: var(--space-4);
+}
+
+.module-placeholder {
+  padding: var(--space-6);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.module-placeholder h2 {
+  margin-bottom: var(--space-3);
+}
+
+.module-placeholder p {
+  margin-bottom: 0.45rem;
+}

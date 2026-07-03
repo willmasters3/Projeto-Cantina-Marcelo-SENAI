@@ -1,0 +1,98 @@
+.admin-form {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.page-content .admin-form {
+  padding: var(--space-6);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.admin-form h2 {
+  margin-bottom: var(--space-2);
+}
+
+label {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-weight: 600;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 0.85rem var(--space-4);
+  margin-bottom: var(--space-4);
+  border: var(--border-width) solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+textarea {
+  resize: vertical;
+}
+
+.form-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.form-field label,
+.form-field input {
+  margin-bottom: 0;
+}
+
+.field-help {
+  margin-bottom: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-help);
+  line-height: 1.45;
+}
+
+.currency-input {
+  position: relative;
+}
+
+.currency-prefix {
+  position: absolute;
+  top: 50%;
+  left: var(--space-4);
+  color: var(--color-text-subtle);
+  font-weight: 700;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.currency-input input {
+  padding-left: 3.2rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.search-form {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.search-form input {
+  margin-bottom: 0;
+}
+
+@media (max-width: 760px) {
+  .search-form {
+    display: grid;
+  }
+}

@@ -1,0 +1,68 @@
+:root {
+  --font-family-base: Arial, sans-serif;
+  --font-size-xs: 0.78rem;
+  --font-size-sm: 0.82rem;
+  --font-size-help: 0.88rem;
+  --font-size-note: 0.92rem;
+  --font-size-base: 1rem;
+  --font-size-brand: 1.4rem;
+  --font-size-title: 2rem;
+
+  --color-background: #f2f5f8;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+  --color-text: #1f2937;
+  --color-text-strong: #1e293b;
+  --color-text-muted: #64748b;
+  --color-text-subtle: #475569;
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-border: #e2e8f0;
+  --color-border-strong: #d1d5db;
+  --color-input-border: #cbd5e1;
+  --color-sidebar: #0f172a;
+  --color-sidebar-active: #1e293b;
+  --color-sidebar-text: #cbd5e1;
+  --color-topbar-button: #334155;
+  --color-success: #15803d;
+  --color-success-strong: #166534;
+  --color-success-surface: #f0fdf4;
+  --color-success-badge: #dcfce7;
+  --color-success-border: #86efac;
+  --color-danger: #b91c1c;
+  --color-danger-strong: #991b1b;
+  --color-danger-surface: #fef2f2;
+  --color-danger-border: #fca5a5;
+  --color-info-text: #1e3a8a;
+  --color-info-surface: #eff6ff;
+  --color-info-border: #93c5fd;
+  --color-monitor-border: #dbeafe;
+
+  --space-1: 0.35rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 1.75rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  --radius-sm: 9px;
+  --radius-control: 10px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+  --border-width: 1px;
+
+  --shadow-container: 0 18px 40px rgba(15, 23, 42, 0.08);
+  --shadow-panel: 0 10px 25px rgba(15, 23, 42, 0.04);
+  --transition-fast: 0.2s ease;
+  --content-width: 1080px;
+  --sidebar-width: 240px;
+  --topbar-height: 72px;
+  --breakpoint-mobile: 760px;
+}

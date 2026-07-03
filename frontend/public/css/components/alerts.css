@@ -1,0 +1,12 @@
+.message {
+  margin-top: var(--space-4);
+  font-weight: 600;
+}
+
+.message.error {
+  color: var(--color-danger);
+}
+
+.message.success {
+  color: var(--color-success);
+}

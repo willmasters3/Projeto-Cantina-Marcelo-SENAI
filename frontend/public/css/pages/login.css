@@ -1,0 +1,30 @@
+.eyebrow {
+  margin-bottom: var(--space-2);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.auth-container {
+  margin-top: max(var(--space-12), 10vh);
+}
+
+.auth-form {
+  margin-top: var(--space-6);
+  text-align: left;
+}
+
+.auth-form button {
+  width: 100%;
+}
+
+.auth-container .message {
+  min-height: var(--space-6);
+}
+
+.public-link {
+  display: inline-block;
+  margin-top: var(--space-2);
+}

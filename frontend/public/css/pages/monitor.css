@@ -1,0 +1,19 @@
+.monitor-container {
+  max-width: 760px;
+}
+
+.monitor-card {
+  margin-top: var(--space-8);
+  padding: var(--space-6);
+  border: var(--border-width) solid var(--color-monitor-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-info-surface);
+}
+
+.monitor-card h2 {
+  margin-bottom: var(--space-3);
+}
+
+.monitor-card p:last-child {
+  margin-bottom: 0;
+}

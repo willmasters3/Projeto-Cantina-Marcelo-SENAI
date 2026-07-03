@@ -1,0 +1,25 @@
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--topbar-height);
+  padding: var(--space-4) var(--space-8);
+  border-bottom: var(--border-width) solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.topbar button {
+  padding: 0.65rem var(--space-4);
+  background: var(--color-topbar-button);
+}
+
+.topbar button:hover {
+  background: var(--color-sidebar);
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    gap: var(--space-4);
+    padding: var(--space-4);
+  }
+}

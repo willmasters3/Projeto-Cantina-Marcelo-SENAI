@@ -1,0 +1,31 @@
+.admin-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.main-content {
+  min-width: 0;
+}
+
+.page-content {
+  width: min(100% - 3rem, var(--content-width));
+  margin: 0 auto;
+  padding: var(--space-10) 0 var(--space-16);
+}
+
+.page-content > h1 {
+  margin-bottom: var(--space-6);
+}
+
+/* Keep this value aligned with --breakpoint-mobile; CSS variables are invalid in media conditions. */
+@media (max-width: 760px) {
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .page-content {
+    width: min(100% - 2rem, var(--content-width));
+    padding-top: var(--space-6);
+  }
+}
