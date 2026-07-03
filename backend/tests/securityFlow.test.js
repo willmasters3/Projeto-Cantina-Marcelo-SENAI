@@ -9,6 +9,8 @@ import authSessionsRepository from '../src/repositories/authSessionsRepository.j
 import authService from '../src/services/authService.js';
 import categoriesRepository from '../src/repositories/categoriesRepository.js';
 import categoriesService from '../src/services/categoriesService.js';
+import clientsRepository from '../src/repositories/clientsRepository.js';
+import clientsService from '../src/services/clientsService.js';
 import productsRepository from '../src/repositories/productsRepository.js';
 import productsService from '../src/services/productsService.js';
 import statusRepository from '../src/repositories/statusRepository.js';
@@ -37,6 +39,15 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
   const originalFindCategoryByName = categoriesRepository.findByName;
   const originalCreateCategoryRecord = categoriesRepository.createCategory;
   const originalFindCategoryById = categoriesRepository.findById;
+  const originalListClients = clientsService.listClients;
+  const originalGetClientById = clientsService.getClientById;
+  const originalCreateClient = clientsService.createClient;
+  const originalUpdateClient = clientsService.updateClient;
+  const originalUpdateClientStatus = clientsService.updateClientStatus;
+  const originalFindClientById = clientsRepository.findById;
+  const originalFindClientByMatricula = clientsRepository.findByMatricula;
+  const originalGetNextClientCodeNumber = clientsRepository.getNextCodeNumber;
+  const originalCreateClientRecord = clientsRepository.createClient;
   const server = app.listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));
   const { port } = server.address();
@@ -355,6 +366,166 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
       );
     });
 
+    await t.test('protege e processa a API de Clientes para administrador e operador', async () => {
+      const client = {
+        id: 1,
+        nome: 'Maria da Silva',
+        matricula: '2026001',
+        telefone: '11999999999',
+        email: 'maria@example.test',
+        codigo: 'CLI-000001',
+        ativo: 1,
+        observacoes: 'Informação interna'
+      };
+      clientsService.listClients = async () => [client];
+      clientsService.getClientById = async () => client;
+      clientsService.createClient = async () => client;
+      clientsService.updateClient = async () => ({ ...client, nome: 'Maria Souza' });
+      clientsService.updateClientStatus = async (id, ativo) => ({ ...client, id, ativo });
+
+      authService.getUserBySessionToken = async () => adminUser;
+      const createResponse = await request('/api/v1/clients', {
+        method: 'POST',
+        headers: {
+          cookie: 'cantina_session=admin-session',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({ nome: 'Maria da Silva', matricula: '2026001' })
+      });
+      assert.equal(createResponse.status, 201);
+      assert.equal((await createResponse.json()).data.codigo, 'CLI-000001');
+
+      const updateResponse = await request('/api/v1/clients/1', {
+        method: 'PUT',
+        headers: {
+          cookie: 'cantina_session=admin-session',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({ nome: 'Maria Souza', matricula: '2026001' })
+      });
+      assert.equal(updateResponse.status, 200);
+
+      const statusResponse = await request('/api/v1/clients/1/status', {
+        method: 'PATCH',
+        headers: {
+          cookie: 'cantina_session=admin-session',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({ ativo: false })
+      });
+      assert.equal(statusResponse.status, 200);
+      assert.equal((await statusResponse.json()).data.ativo, false);
+
+      authService.getUserBySessionToken = async () => ({
+        ...adminUser,
+        role: { slug: 'OPERADOR_CAIXA', nome: 'Operador de Caixa' }
+      });
+      const cashierResponse = await request('/api/v1/clients', {
+        headers: { cookie: 'cantina_session=cashier-session' }
+      });
+      assert.equal(cashierResponse.status, 200);
+
+      const cashierPageResponse = await request('/app/clientes', {
+        headers: { cookie: 'cantina_session=cashier-session' }
+      });
+      assert.equal(cashierPageResponse.status, 200);
+      assert.match(await cashierPageResponse.text(), /Cadastrar cliente/);
+
+      authService.getUserBySessionToken = async () => ({
+        ...adminUser,
+        role: { slug: 'CONSULTA', nome: 'Consulta' }
+      });
+      const deniedResponse = await request('/api/v1/clients', {
+        headers: { cookie: 'cantina_session=viewer-session' }
+      });
+      assert.equal(deniedResponse.status, 403);
+    });
+
+    await t.test('gera código sequencial e bloqueia matrícula duplicada', async () => {
+      clientsService.createClient = originalCreateClient;
+      let insertedClient;
+      clientsRepository.findByMatricula = async () => null;
+      clientsRepository.getNextCodeNumber = async () => 1;
+      clientsRepository.createClient = async (client) => {
+        insertedClient = client;
+        return 7;
+      };
+      clientsRepository.findById = async (id) => ({ id, ...insertedClient });
+
+      const created = await clientsService.createClient({
+        nome: '  João Pereira  ',
+        matricula: '',
+        telefone: '',
+        email: ' JOAO@EXAMPLE.TEST ',
+        observacoes: ''
+      });
+      assert.equal(created.codigo, 'CLI-000001');
+      assert.equal(created.nome, 'João Pereira');
+      assert.equal(created.matricula, null);
+      assert.equal(created.email, 'joao@example.test');
+
+      clientsRepository.findByMatricula = async () => ({
+        id: 3,
+        nome: 'Cliente existente',
+        matricula: 'MAT-1'
+      });
+      await assert.rejects(
+        clientsService.createClient({
+          nome: 'Outro cliente',
+          matricula: ' MAT-1 ',
+          telefone: null,
+          email: null,
+          observacoes: null
+        }),
+        (error) => error.status === 409 && /Cliente existente/.test(error.message)
+      );
+
+      const generatedNumbers = [1, 2];
+      let creationAttempts = 0;
+      clientsRepository.findByMatricula = async () => null;
+      clientsRepository.getNextCodeNumber = async () => generatedNumbers.shift();
+      clientsRepository.createClient = async (client) => {
+        creationAttempts += 1;
+        if (creationAttempts === 1) {
+          const collision = new Error('Código duplicado');
+          collision.code = 'ER_DUP_ENTRY';
+          throw collision;
+        }
+        insertedClient = client;
+        return 8;
+      };
+
+      const retriedClient = await clientsService.createClient({
+        nome: 'Código em concorrência',
+        matricula: null,
+        telefone: null,
+        email: null,
+        observacoes: null
+      });
+      assert.equal(creationAttempts, 2);
+      assert.equal(retriedClient.codigo, 'CLI-000002');
+    });
+
+    await t.test('mantém Clientes livre de JavaScript inline e sem exposição pública', async () => {
+      const files = await Promise.all([
+        'app/clientes.html',
+        'js/clientsApi.js',
+        'js/clientsApp.js'
+      ].map((file) => fs.readFile(path.join(frontendPath, file), 'utf8')));
+      const source = files.join('\n');
+
+      assert.doesNotMatch(source, /\son[a-z]+\s*=/i);
+      assert.doesNotMatch(source, /\beval\s*\(/);
+      assert.doesNotMatch(source, /\bnew\s+Function\b/);
+      assert.doesNotMatch(source, /innerHTML/);
+      assert.match(files[0], /Observações internas/);
+      assert.match(files[0], /clientsApp\.js/);
+
+      authService.getUserBySessionToken = async () => null;
+      const publicResponse = await request('/api/v1/clients');
+      assert.equal(publicResponse.status, 401);
+    });
+
     await t.test('usa a rota de status correta sem consultar o MySQL', async () => {
       statusRepository.checkDatabaseConnection = async () => true;
       const statusResponse = await request('/api/v1/status');
@@ -391,6 +562,15 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
     categoriesRepository.findByName = originalFindCategoryByName;
     categoriesRepository.createCategory = originalCreateCategoryRecord;
     categoriesRepository.findById = originalFindCategoryById;
+    clientsService.listClients = originalListClients;
+    clientsService.getClientById = originalGetClientById;
+    clientsService.createClient = originalCreateClient;
+    clientsService.updateClient = originalUpdateClient;
+    clientsService.updateClientStatus = originalUpdateClientStatus;
+    clientsRepository.findById = originalFindClientById;
+    clientsRepository.findByMatricula = originalFindClientByMatricula;
+    clientsRepository.getNextCodeNumber = originalGetNextClientCodeNumber;
+    clientsRepository.createClient = originalCreateClientRecord;
     await new Promise((resolve, reject) => server.close((error) => (
       error ? reject(error) : resolve()
     )));

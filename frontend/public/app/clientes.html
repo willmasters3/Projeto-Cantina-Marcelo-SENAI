@@ -28,15 +28,101 @@
         <button id="logoutButton">Sair</button>
       </header>
 
-      <section class="page-content">
+      <section class="page-content" id="clientsAdminPage">
         <h1>Clientes</h1>
-        <div class="module-placeholder">
-          <h2>Módulo em desenvolvimento</h2>
-          <p>O cadastro de clientes será implementado em uma próxima etapa.</p>
-        </div>
+
+        <form id="clientForm" class="admin-form">
+          <h2 id="clientFormTitle">Cadastrar cliente</h2>
+          <p class="field-help">O código interno será gerado automaticamente.</p>
+
+          <div class="client-form-grid">
+            <div class="form-field">
+              <label for="clientName">Nome completo</label>
+              <input
+                id="clientName"
+                name="nome"
+                type="text"
+                maxlength="150"
+                autocomplete="name"
+                required
+              />
+            </div>
+
+            <div class="form-field">
+              <label for="clientRegistration">Matrícula</label>
+              <input
+                id="clientRegistration"
+                name="matricula"
+                type="text"
+                maxlength="50"
+                autocomplete="off"
+                placeholder="Opcional"
+              />
+            </div>
+
+            <div class="form-field">
+              <label for="clientPhone">Telefone</label>
+              <input
+                id="clientPhone"
+                name="telefone"
+                type="tel"
+                maxlength="30"
+                autocomplete="tel"
+                placeholder="Opcional"
+              />
+            </div>
+
+            <div class="form-field">
+              <label for="clientEmail">E-mail</label>
+              <input
+                id="clientEmail"
+                name="email"
+                type="email"
+                maxlength="254"
+                autocomplete="email"
+                placeholder="Opcional"
+              />
+            </div>
+
+            <div class="form-field full-width">
+              <label for="clientNotes">Observações internas</label>
+              <textarea
+                id="clientNotes"
+                name="observacoes"
+                rows="4"
+                placeholder="Opcional. Estas informações são apenas para uso interno."
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button id="clientSubmitButton" type="submit">Cadastrar cliente</button>
+            <button id="cancelClientEditButton" class="secondary-action" type="button" hidden>
+              Cancelar edição
+            </button>
+          </div>
+        </form>
+
+        <p id="clientMessage" class="message" aria-live="polite"></p>
+
+        <section class="card">
+          <h2>Clientes cadastrados</h2>
+          <form id="clientSearchForm" class="search-form">
+            <label class="visually-hidden" for="clientSearch">Buscar clientes</label>
+            <input
+              id="clientSearch"
+              type="search"
+              autocomplete="off"
+              placeholder="Nome, matrícula, telefone ou código"
+            />
+            <button type="submit">Buscar</button>
+          </form>
+          <div id="clientList" class="table-container" aria-live="polite"></div>
+        </section>
       </section>
     </div>
   </div>
   <script type="module" src="../js/appLayout.js"></script>
+  <script type="module" src="../js/clientsApp.js"></script>
 </body>
 </html>

@@ -9,6 +9,7 @@ import statusRoutes from './routes/statusRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import pageRoutes from './routes/pageRoutes.js';
 import categoriesRoutes from './routes/categoriesRoutes.js';
+import clientsRoutes from './routes/clientsRoutes.js';
 import productsRoutes from './routes/productsRoutes.js';
 import cookieMiddleware from './middlewares/cookieMiddleware.js';
 import notFoundMiddleware from './middlewares/notFoundMiddleware.js';
@@ -42,7 +43,7 @@ app.use(cookieMiddleware);
 app.use(
   cors({
     origin: env.corsOrigin,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true
   })
 );
@@ -56,6 +57,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/status', statusRoutes);
 app.use('/api/v1/categories', categoriesRoutes);
 app.use('/api/v1/products', productsRoutes);
+app.use('/api/v1/clients', clientsRoutes);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
