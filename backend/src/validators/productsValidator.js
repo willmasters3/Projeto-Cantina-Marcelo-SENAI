@@ -1,5 +1,14 @@
 import HttpError from '../utils/httpError.js';
 
+const BARCODE_NUMBERS_ONLY_MESSAGE = 'Código de barras deve conter somente números.';
+
+const isValidOptionalBarcode = (value) => (
+  value === undefined
+  || value === null
+  || value === ''
+  || (typeof value === 'string' && /^[0-9]+$/.test(value))
+);
+
 const parseBoolean = (value) => {
   if (typeof value === 'boolean') return value;
   if (value === 1 || value === '1' || value === 'true') return true;
@@ -38,8 +47,8 @@ const validateProductPayload = (req, res, next) => {
     throw new HttpError(400, 'Estoque mínimo deve ser informado e não pode ser negativo');
   }
 
-  if (codigo_barras && typeof codigo_barras !== 'string') {
-    throw new HttpError(400, 'Código de barras deve ser texto');
+  if (!isValidOptionalBarcode(codigo_barras)) {
+    throw new HttpError(422, BARCODE_NUMBERS_ONLY_MESSAGE);
   }
 
   const parsedAtivo = parseBoolean(ativo);
@@ -57,4 +66,4 @@ const validateProductStatus = (req, res, next) => {
   return next();
 };
 
-export { validateProductPayload, validateProductStatus };
+export { isValidOptionalBarcode, validateProductPayload, validateProductStatus };

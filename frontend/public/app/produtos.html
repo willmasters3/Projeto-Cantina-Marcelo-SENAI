@@ -40,14 +40,22 @@
         <form id="productForm" class="admin-form">
           <h2 id="productFormTitle">Cadastrar produto</h2>
 
-          <label for="productBarcode">Código de barras</label>
-          <input
-            id="productBarcode"
-            name="codigo_barras"
-            type="text"
-            placeholder="Opcional"
-            autocomplete="off"
-          />
+          <div class="form-field">
+            <label for="productBarcode">Código de barras</label>
+            <input
+              id="productBarcode"
+              name="codigo_barras"
+              type="text"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              placeholder="Opcional"
+              autocomplete="off"
+              aria-describedby="productBarcodeHelp barcodeFeedbackMessage"
+            />
+            <p id="productBarcodeHelp" class="field-help">
+              Opcional. Bipe com o leitor ou informe somente números (EAN-8, EAN-13 ou UPC).
+            </p>
+          </div>
 
           <div id="barcodeFeedback" class="barcode-feedback" role="status" aria-live="polite" hidden>
             <p id="barcodeFeedbackMessage"></p>
@@ -56,8 +64,20 @@
             </button>
           </div>
 
-          <label for="productName">Nome</label>
-          <input id="productName" name="nome" type="text" autocomplete="off" required />
+          <div class="form-field">
+            <label for="productName">Nome do produto</label>
+            <input
+              id="productName"
+              name="nome"
+              type="text"
+              autocomplete="off"
+              aria-describedby="productNameHelp"
+              required
+            />
+            <p id="productNameHelp" class="field-help">
+              Nome que identifica o produto. Pode conter letras, números e espaços.
+            </p>
+          </div>
 
           <label for="productCategory">Categoria</label>
           <select id="productCategory"></select>

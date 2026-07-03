@@ -25,6 +25,7 @@ const openExistingProductButton = document.getElementById('openExistingProductBu
 const productSubmitButton = document.getElementById('productSubmitButton');
 const cancelProductEditButton = document.getElementById('cancelProductEditButton');
 const productFormTitle = document.getElementById('productFormTitle');
+const barcodeNumbersOnlyMessage = 'Código de barras deve conter somente números.';
 
 let duplicateProduct = null;
 let editingProductId = null;
@@ -96,8 +97,24 @@ const showBarcodeFeedback = (message, type, product = null) => {
   openExistingProductButton.hidden = !product;
 };
 
+const isBarcodeValid = (barcode) => barcode === '' || /^[0-9]+$/.test(barcode);
+
+const validateBarcodeInput = ({ focusInvalid = false } = {}) => {
+  if (isBarcodeValid(barcodeInput.value)) {
+    barcodeInput.setCustomValidity('');
+    return true;
+  }
+
+  duplicateProduct = null;
+  barcodeInput.setCustomValidity(barcodeNumbersOnlyMessage);
+  showBarcodeFeedback(barcodeNumbersOnlyMessage, 'error');
+  if (focusInvalid) barcodeInput.focus();
+  return false;
+};
+
 const resetProductForm = () => {
   productForm.reset();
+  barcodeInput.setCustomValidity('');
   setCurrencyInputDecimalValue(productPriceInput, null);
   setCurrencyInputDecimalValue(productCostInput, null);
   duplicateProduct = null;
@@ -127,7 +144,11 @@ const openProductEditor = (product) => {
   cancelProductEditButton.hidden = false;
   hideBarcodeFeedback();
   showMessage(productMessage, `Editando o produto ${product.nome}.`);
-  productNameInput.focus();
+  if (validateBarcodeInput()) {
+    productNameInput.focus();
+  } else {
+    barcodeInput.focus();
+  }
   productForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
@@ -151,7 +172,9 @@ const loadCategories = async () => {
 };
 
 const checkBarcode = async ({ focusName = true } = {}) => {
-  const barcode = barcodeInput.value.trim();
+  if (!validateBarcodeInput({ focusInvalid: true })) return 'invalid';
+
+  const barcode = barcodeInput.value;
 
   if (!barcode) {
     duplicateProduct = null;
@@ -205,6 +228,10 @@ productForm.addEventListener('submit', async (event) => {
   productSubmitButton.disabled = true;
   try {
     const barcodeStatus = await checkBarcode({ focusName: false });
+    if (barcodeStatus === 'invalid') {
+      showMessage(productMessage, barcodeNumbersOnlyMessage, true);
+      return;
+    }
     if (barcodeStatus === 'duplicate') {
       showMessage(
         productMessage,
@@ -225,7 +252,7 @@ productForm.addEventListener('submit', async (event) => {
 
     const productData = {
       categoria_id: categorySelect.value ? Number(categorySelect.value) : null,
-      codigo_barras: barcodeInput.value.trim() || null,
+      codigo_barras: barcodeInput.value || null,
       nome: productNameInput.value.trim(),
       descricao: productDescriptionInput.value.trim() || null,
       preco_venda: Number(priceDecimal),
@@ -256,15 +283,37 @@ productForm.addEventListener('submit', async (event) => {
 });
 
 barcodeInput.addEventListener('keydown', async (event) => {
-  if (event.key !== 'Enter') return;
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    event.stopPropagation();
+    await checkBarcode();
+    return;
+  }
+
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.key.length === 1 && !/^[0-9]$/.test(event.key)) {
+    event.preventDefault();
+    barcodeInput.setCustomValidity(
+      isBarcodeValid(barcodeInput.value) ? '' : barcodeNumbersOnlyMessage
+    );
+    showBarcodeFeedback(barcodeNumbersOnlyMessage, 'error');
+  }
+});
+
+barcodeInput.addEventListener('paste', (event) => {
+  const pastedValue = event.clipboardData?.getData('text') ?? '';
+  if (/^[0-9]+$/.test(pastedValue)) return;
+
   event.preventDefault();
-  event.stopPropagation();
-  await checkBarcode();
+  barcodeInput.setCustomValidity(
+    isBarcodeValid(barcodeInput.value) ? '' : barcodeNumbersOnlyMessage
+  );
+  showBarcodeFeedback(barcodeNumbersOnlyMessage, 'error');
 });
 
 barcodeInput.addEventListener('input', () => {
   duplicateProduct = null;
-  hideBarcodeFeedback();
+  if (validateBarcodeInput()) hideBarcodeFeedback();
 });
 
 openExistingProductButton.addEventListener('click', () => {

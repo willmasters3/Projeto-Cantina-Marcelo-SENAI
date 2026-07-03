@@ -22,6 +22,7 @@ import {
 import productsRepository from '../src/repositories/productsRepository.js';
 import productsService from '../src/services/productsService.js';
 import statusRepository from '../src/repositories/statusRepository.js';
+import { isValidOptionalBarcode } from '../src/validators/productsValidator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,6 +44,8 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
   const originalListCategories = categoriesService.listCategories;
   const originalCreateCategory = categoriesService.createCategory;
   const originalGetProductByBarcode = productsService.getProductByBarcode;
+  const originalCreateProduct = productsService.createProduct;
+  const originalUpdateProduct = productsService.updateProduct;
   const originalFindProductByBarcode = productsRepository.findByBarcode;
   const originalFindCategoryByName = categoriesRepository.findByName;
   const originalCreateCategoryRecord = categoriesRepository.createCategory;
@@ -273,6 +276,7 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
         'js/currencyInput.js'
       ].map((file) => fs.readFile(path.join(frontendPath, file), 'utf8')));
       const source = files.join('\n');
+      const productsHtml = files[1];
       const productsScript = files[3];
 
       assert.doesNotMatch(source, /\son[a-z]+\s*=/i);
@@ -282,6 +286,13 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
       assert.match(productsScript, /barcodeInput\.addEventListener\('keydown'/);
       assert.match(productsScript, /event\.preventDefault\(\)/);
       assert.match(productsScript, /adminApi\.getProductByBarcode\(barcode\)/);
+      assert.match(
+        productsHtml,
+        /id="productBarcode"[\s\S]*?type="text"[\s\S]*?inputmode="numeric"[\s\S]*?pattern="\[0-9\]\*"/
+      );
+      assert.match(productsHtml, /Nome do produto/);
+      assert.match(productsScript, /barcodeInput\.addEventListener\('paste'/);
+      assert.match(productsScript, /Código de barras deve conter somente números\./);
     });
 
     await t.test('mantém o CSS modular, sem estilos inline e com main apenas agregador', async () => {
@@ -440,6 +451,103 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
         }),
         (error) => error.status === 409 && /Produto existente/.test(error.message)
       );
+    });
+
+    await t.test('aceita somente dígitos no código de barras ao cadastrar e editar', async () => {
+      const acceptedBarcodes = ['7896067202340', '78938816', '078938816'];
+      const rejectedBarcodes = [
+        'Bateria Panasonic CR2032',
+        '789-606-720',
+        'ABC123'
+      ];
+
+      acceptedBarcodes.forEach((barcode) => assert.equal(isValidOptionalBarcode(barcode), true));
+      assert.equal(isValidOptionalBarcode(null), true);
+      assert.equal(isValidOptionalBarcode(''), true);
+      rejectedBarcodes.forEach((barcode) => assert.equal(isValidOptionalBarcode(barcode), false));
+      assert.equal(isValidOptionalBarcode(' 78938816'), false);
+
+      authService.getUserBySessionToken = async () => adminUser;
+      const receivedBarcodes = [];
+      productsService.createProduct = async (payload) => {
+        receivedBarcodes.push(payload.codigo_barras);
+        return { id: receivedBarcodes.length, ...payload };
+      };
+      productsService.updateProduct = async () => {
+        throw new Error('O service de edição não deve receber código de barras inválido');
+      };
+
+      try {
+        for (const barcode of acceptedBarcodes) {
+          const response = await request('/api/v1/products', {
+            method: 'POST',
+            headers: {
+              cookie: 'cantina_session=admin-session',
+              'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+              categoria_id: null,
+              codigo_barras: barcode,
+              nome: 'Produto de teste',
+              preco_venda: 4.5,
+              estoque_atual: 1,
+              estoque_minimo: 0,
+              ativo: true
+            })
+          });
+          assert.equal(response.status, 201);
+        }
+        assert.deepEqual(receivedBarcodes, acceptedBarcodes);
+
+        for (const barcode of rejectedBarcodes) {
+          const response = await request('/api/v1/products', {
+            method: 'POST',
+            headers: {
+              cookie: 'cantina_session=admin-session',
+              'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+              categoria_id: null,
+              codigo_barras: barcode,
+              nome: 'Produto de teste',
+              preco_venda: 4.5,
+              estoque_atual: 1,
+              estoque_minimo: 0,
+              ativo: true
+            })
+          });
+          assert.equal(response.status, 422);
+          assert.equal(
+            (await response.json()).error,
+            'Código de barras deve conter somente números.'
+          );
+        }
+
+        const editResponse = await request('/api/v1/products/8', {
+          method: 'PUT',
+          headers: {
+            cookie: 'cantina_session=admin-session',
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify({
+            categoria_id: null,
+            codigo_barras: 'ABC123',
+            nome: 'Produto editado',
+            preco_venda: 4.5,
+            estoque_atual: 1,
+            estoque_minimo: 0,
+            ativo: true
+          })
+        });
+        assert.equal(editResponse.status, 422);
+        assert.equal(
+          (await editResponse.json()).error,
+          'Código de barras deve conter somente números.'
+        );
+      } finally {
+        productsService.createProduct = originalCreateProduct;
+        productsService.updateProduct = originalUpdateProduct;
+      }
     });
 
     await t.test('protege e processa a API de Clientes para administrador e operador', async () => {
@@ -790,6 +898,8 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
     categoriesService.listCategories = originalListCategories;
     categoriesService.createCategory = originalCreateCategory;
     productsService.getProductByBarcode = originalGetProductByBarcode;
+    productsService.createProduct = originalCreateProduct;
+    productsService.updateProduct = originalUpdateProduct;
     productsRepository.findByBarcode = originalFindProductByBarcode;
     categoriesRepository.findByName = originalFindCategoryByName;
     categoriesRepository.createCategory = originalCreateCategoryRecord;
