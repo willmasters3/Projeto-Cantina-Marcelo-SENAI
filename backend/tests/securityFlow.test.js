@@ -9,9 +9,16 @@ import authSessionsRepository from '../src/repositories/authSessionsRepository.j
 import authService from '../src/services/authService.js';
 import categoriesRepository from '../src/repositories/categoriesRepository.js';
 import categoriesService from '../src/services/categoriesService.js';
+import cashRepository from '../src/repositories/cashRepository.js';
+import cashService from '../src/services/cashService.js';
 import clientsRepository from '../src/repositories/clientsRepository.js';
 import clientsService from '../src/services/clientsService.js';
 import { isValidCpf, normalizeCpf } from '../src/utils/cpf.js';
+import {
+  formatFixedDecimal,
+  multiplyFixedDecimal,
+  parseFixedDecimal
+} from '../src/utils/fixedDecimal.js';
 import productsRepository from '../src/repositories/productsRepository.js';
 import productsService from '../src/services/productsService.js';
 import statusRepository from '../src/repositories/statusRepository.js';
@@ -802,5 +809,303 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
     await new Promise((resolve, reject) => server.close((error) => (
       error ? reject(error) : resolve()
     )));
+  }
+});
+
+test('fluxo funcional e transacional do Caixa sem acessar o banco', async (t) => {
+  const originalRepository = { ...cashRepository };
+  const originalGetUser = authService.getUserBySessionToken;
+  const originalCancelService = cashService.cancelSale;
+  const fakeConnection = {};
+  const user = {
+    id: 2,
+    nome: 'Operador de Teste',
+    email: 'caixa@example.test',
+    role: { slug: 'OPERADOR_CAIXA', nome: 'Operador de Caixa' }
+  };
+
+  const useFakeTransaction = () => {
+    cashRepository.withTransaction = async (callback) => callback(fakeConnection);
+  };
+
+  try {
+    await t.test('calcula valores com quatro casas sem ponto flutuante', () => {
+      assert.equal(parseFixedDecimal('0.10'), 1000n);
+      assert.equal(parseFixedDecimal('4000.0000'), 40000000n);
+      assert.equal(formatFixedDecimal(45000n), '4.5000');
+      assert.equal(multiplyFixedDecimal(parseFixedDecimal('4.50'), 3n), 135000n);
+    });
+
+    await t.test('confirma venda à vista usando preço e estoque travados no servidor', async () => {
+      useFakeTransaction();
+      const saleItems = [];
+      const stockMovements = [];
+      const stockUpdates = [];
+      const payments = [];
+      let insertedSale;
+
+      cashRepository.findOpenSession = async () => ({ id: 4, status: 'ABERTA' });
+      cashRepository.lockProductsByIds = async () => [{
+        id: 8,
+        codigo_barras: '7890000000001',
+        nome: 'Suco',
+        preco_venda: '4.5000',
+        custo: '2.0000',
+        estoque_atual: '2.0000',
+        ativo: 1
+      }];
+      cashRepository.createSale = async (sale) => {
+        insertedSale = sale;
+        return 31;
+      };
+      cashRepository.createSaleItem = async (item) => {
+        saleItems.push(item);
+        return 41;
+      };
+      cashRepository.updateProductStock = async (id, stock) => {
+        stockUpdates.push({ id, stock });
+        return 1;
+      };
+      cashRepository.createStockMovement = async (movement) => {
+        stockMovements.push(movement);
+        return 51;
+      };
+      cashRepository.createPayment = async (payment) => {
+        payments.push(payment);
+        return 61;
+      };
+      cashRepository.createAccountEntry = async () => {
+        throw new Error('Venda à vista não deve gerar débito de cliente');
+      };
+      cashRepository.findSaleById = async () => ({ id: 31, total: '9.0000' });
+
+      const sale = await cashService.createSale({
+        tipo_venda: 'A_VISTA',
+        itens: [{ tipo_item: 'PRODUTO', produto_id: '8', quantidade: '2' }],
+        pagamento: { forma_pagamento: 'PIX' }
+      }, user);
+
+      assert.equal(sale.id, 31);
+      assert.equal(insertedSale.subtotal, '9.0000');
+      assert.equal(insertedSale.total, '9.0000');
+      assert.equal(saleItems[0].unitPrice, '4.5000');
+      assert.equal(saleItems[0].quantity, '2.0000');
+      assert.deepEqual(stockUpdates, [{ id: '8', stock: '0.0000' }]);
+      assert.equal(stockMovements[0].stockBefore, '2.0000');
+      assert.equal(stockMovements[0].stockAfter, '0.0000');
+      assert.equal(payments[0].method, 'PIX');
+      assert.equal(payments[0].amount, '9.0000');
+    });
+
+    await t.test('bloqueia estoque insuficiente antes de persistir a venda', async () => {
+      useFakeTransaction();
+      let saleWasCreated = false;
+      cashRepository.findOpenSession = async () => ({ id: 4, status: 'ABERTA' });
+      cashRepository.lockProductsByIds = async () => [{
+        id: 8,
+        codigo_barras: '7890000000001',
+        nome: 'Suco',
+        preco_venda: '4.5000',
+        custo: null,
+        estoque_atual: '1.0000',
+        ativo: 1
+      }];
+      cashRepository.createSale = async () => {
+        saleWasCreated = true;
+        return 32;
+      };
+
+      await assert.rejects(
+        cashService.createSale({
+          tipo_venda: 'A_VISTA',
+          itens: [{ tipo_item: 'PRODUTO', produto_id: '8', quantidade: '2' }],
+          pagamento: { forma_pagamento: 'DINHEIRO' }
+        }, user),
+        (error) => error.status === 409 && /Estoque insuficiente/.test(error.message)
+      );
+      assert.equal(saleWasCreated, false);
+    });
+
+    await t.test('gera débito para fiado e exige descrição no item Diversos', async () => {
+      useFakeTransaction();
+      const accountEntries = [];
+      const saleItems = [];
+      cashRepository.findOpenSession = async () => ({ id: 4, status: 'ABERTA' });
+      cashRepository.lockClientById = async () => ({
+        id: 9,
+        nome: 'Cliente ativo',
+        codigo: 'CLI-000009',
+        ativo: 1
+      });
+      cashRepository.lockProductsByIds = async () => [];
+      cashRepository.createSale = async () => 33;
+      cashRepository.createSaleItem = async (item) => {
+        saleItems.push(item);
+        return 43;
+      };
+      cashRepository.createAccountEntry = async (entry) => {
+        accountEntries.push(entry);
+        return 63;
+      };
+      cashRepository.createPayment = async () => {
+        throw new Error('Fiado não deve gerar pagamento');
+      };
+      cashRepository.findSaleById = async () => ({ id: 33, tipo_venda: 'FIADO' });
+
+      await cashService.createSale({
+        tipo_venda: 'FIADO',
+        cliente_id: '9',
+        itens: [{
+          tipo_item: 'DIVERSOS',
+          descricao: 'Lanche especial',
+          preco_unitario: '7.50',
+          quantidade: '1'
+        }]
+      }, user);
+
+      assert.equal(saleItems[0].itemType, 'DIVERSOS');
+      assert.equal(saleItems[0].movesStock, false);
+      assert.equal(accountEntries[0].direction, 'DEBITO');
+      assert.equal(accountEntries[0].origin, 'VENDA_FIADO');
+      assert.equal(accountEntries[0].amount, '7.5000');
+
+      await assert.rejects(
+        cashService.createSale({
+          tipo_venda: 'FIADO',
+          cliente_id: '9',
+          itens: [{ tipo_item: 'DIVERSOS', preco_unitario: '1.00', quantidade: '1' }]
+        }, user),
+        (error) => error.status === 400 && /descrição/.test(error.message)
+      );
+    });
+
+    await t.test('exige justificativa quando o fechamento possui diferença', async () => {
+      useFakeTransaction();
+      let closeWasCalled = false;
+      cashRepository.findOpenSession = async () => ({ id: 4, status: 'ABERTA' });
+      cashRepository.calculateExpectedCash = async () => '110.0000';
+      cashRepository.closeSession = async () => {
+        closeWasCalled = true;
+        return 1;
+      };
+
+      await assert.rejects(
+        cashService.closeSession({ valor_fechamento_informado: '100.00' }, user),
+        (error) => error.status === 400 && /justificativa/.test(error.message)
+      );
+      assert.equal(closeWasCalled, false);
+    });
+
+    await t.test('cancela venda criando estorno e entrada de estoque', async () => {
+      useFakeTransaction();
+      const reversalMovements = [];
+      const reversalPayments = [];
+      cashRepository.findSaleById = async () => ({
+        id: 34,
+        cash_session_id: 4,
+        cliente_id: null,
+        tipo_venda: 'A_VISTA',
+        status: 'CONFIRMADA'
+      });
+      cashRepository.findSaleStockMovements = async () => [{
+        id: 70,
+        produto_id: 8,
+        sale_item_id: 44,
+        quantidade: '2.0000'
+      }];
+      cashRepository.lockProductsByIds = async () => [{ id: 8, estoque_atual: '3.0000' }];
+      cashRepository.updateProductStock = async () => 1;
+      cashRepository.createStockMovement = async (movement) => {
+        reversalMovements.push(movement);
+        return 71;
+      };
+      cashRepository.findConfirmedSalePayments = async () => [{
+        id: 80,
+        cash_session_id: 4,
+        cliente_id: null,
+        finalidade: 'VENDA',
+        forma_pagamento: 'DINHEIRO',
+        valor: '9.0000'
+      }];
+      cashRepository.createPayment = async (payment) => {
+        reversalPayments.push(payment);
+        return 81;
+      };
+      cashRepository.cancelSale = async () => 1;
+
+      await assert.rejects(
+        cashService.cancelSale('34', { motivo: 'Tentativa do operador' }, user),
+        (error) => error.status === 403
+      );
+
+      await cashService.cancelSale('34', { motivo: 'Lançamento incorreto' }, {
+        ...user,
+        role: { slug: 'ADMINISTRADOR', nome: 'Administrador' }
+      });
+
+      assert.equal(reversalMovements[0].direction, 'ENTRADA');
+      assert.equal(reversalMovements[0].stockBefore, '3.0000');
+      assert.equal(reversalMovements[0].stockAfter, '5.0000');
+      assert.equal(reversalPayments[0].operationType, 'ESTORNO');
+      assert.equal(reversalPayments[0].originalPaymentId, 80);
+    });
+
+    await t.test('nega cancelamento ao operador e permite ao administrador na rota', async () => {
+      const server = app.listen(0, '127.0.0.1');
+      await new Promise((resolve) => server.once('listening', resolve));
+      const { port } = server.address();
+      const request = (options) => fetch(`http://127.0.0.1:${port}/api/v1/cash/sales/34/cancel`, {
+        method: 'POST',
+        redirect: 'manual',
+        headers: {
+          cookie: 'cantina_session=test-session',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({ motivo: 'Teste de permissão' }),
+        ...options
+      });
+
+      try {
+        authService.getUserBySessionToken = async () => user;
+        const denied = await request();
+        assert.equal(denied.status, 403);
+
+        let receivedUser;
+        cashService.cancelSale = async (id, payload, authenticatedUser) => {
+          receivedUser = authenticatedUser;
+          return { id, status: 'CANCELADA', motivo: payload.motivo };
+        };
+        authService.getUserBySessionToken = async () => ({
+          ...user,
+          role: { slug: 'ADMINISTRADOR', nome: 'Administrador' }
+        });
+        const allowed = await request();
+        assert.equal(allowed.status, 200);
+        assert.equal(receivedUser.role.slug, 'ADMINISTRADOR');
+      } finally {
+        await new Promise((resolve, reject) => server.close((error) => (
+          error ? reject(error) : resolve()
+        )));
+      }
+    });
+
+    await t.test('mantém Caixa livre de código inline e captura o Enter do leitor', async () => {
+      const files = await Promise.all([
+        'app/caixa.html',
+        'js/cashApp.js',
+        'js/cashApi.js',
+        'js/fixedMoney.js'
+      ].map((file) => fs.readFile(path.join(frontendPath, file), 'utf8')));
+      const source = files.join('\n');
+      assert.doesNotMatch(files[0], /\son[a-z]+\s*=/i);
+      assert.doesNotMatch(source, /\beval\s*\(|\bnew\s+Function\b|innerHTML/);
+      assert.match(files[1], /barcodeSaleForm\.addEventListener\('submit'/);
+      assert.match(files[1], /event\.preventDefault\(\)/);
+      assert.match(files[1], /cashApi\.getProductByBarcode\(barcode\)/);
+    });
+  } finally {
+    Object.assign(cashRepository, originalRepository);
+    authService.getUserBySessionToken = originalGetUser;
+    cashService.cancelSale = originalCancelService;
   }
 });

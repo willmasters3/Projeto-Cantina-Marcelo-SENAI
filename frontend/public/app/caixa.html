@@ -29,15 +29,288 @@
         <button id="logoutButton">Sair</button>
       </header>
 
-      <section class="page-content">
-        <h1>Caixa</h1>
-        <div class="module-placeholder">
-          <h2>Módulo em desenvolvimento</h2>
-          <p>O caixa será implementado em uma próxima etapa.</p>
+      <section class="page-content cash-page" id="cashPage">
+        <div class="cash-page-heading">
+          <div>
+            <p class="cash-eyebrow">PDV interno</p>
+            <h1>Caixa</h1>
+          </div>
+          <p id="cashSessionBadge" class="cash-session-badge">Consultando caixa...</p>
+        </div>
+
+        <p id="cashMessage" class="message" aria-live="polite"></p>
+
+        <section class="card cash-session-card" aria-labelledby="cashSessionTitle">
+          <div class="section-heading">
+            <div>
+              <h2 id="cashSessionTitle">Sessão de caixa</h2>
+              <p>Abra o caixa para liberar o carrinho e registrar vendas.</p>
+            </div>
+          </div>
+
+          <form id="openCashForm" class="cash-inline-form">
+            <div class="form-field">
+              <label for="openingAmount">Valor inicial em dinheiro</label>
+              <div class="currency-input">
+                <span class="currency-prefix" aria-hidden="true">R$</span>
+                <input
+                  id="openingAmount"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  placeholder="0,00"
+                  required
+                />
+              </div>
+            </div>
+            <div class="form-field cash-grow-field">
+              <label for="openingNotes">Observação de abertura</label>
+              <input id="openingNotes" type="text" maxlength="500" placeholder="Opcional" />
+            </div>
+            <button id="openCashButton" type="submit">Abrir caixa</button>
+          </form>
+
+          <div id="openCashSummary" hidden>
+            <dl class="cash-session-details">
+              <div><dt>Terminal</dt><dd id="sessionTerminal">—</dd></div>
+              <div><dt>Aberto por</dt><dd id="sessionOpenedBy">—</dd></div>
+              <div><dt>Abertura</dt><dd id="sessionOpeningAmount">—</dd></div>
+              <div><dt>Dinheiro esperado</dt><dd id="sessionExpectedAmount">—</dd></div>
+            </dl>
+            <button id="showCloseCashButton" class="secondary-action" type="button">
+              Fechar caixa
+            </button>
+          </div>
+
+          <form id="closeCashForm" class="cash-close-form" hidden>
+            <h3>Conferência de fechamento</h3>
+            <p>Conte o dinheiro físico. Diferenças exigem justificativa.</p>
+            <div class="cash-close-grid">
+              <div class="form-field">
+                <label for="closingAmount">Valor contado</label>
+                <div class="currency-input">
+                  <span class="currency-prefix" aria-hidden="true">R$</span>
+                  <input
+                    id="closingAmount"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    placeholder="0,00"
+                    required
+                  />
+                </div>
+              </div>
+              <div class="form-field">
+                <label for="closingDifferenceReason">Justificativa da diferença</label>
+                <input
+                  id="closingDifferenceReason"
+                  type="text"
+                  maxlength="500"
+                  placeholder="Obrigatória somente se houver diferença"
+                />
+              </div>
+              <div class="form-field full-width">
+                <label for="closingNotes">Observação de fechamento</label>
+                <input id="closingNotes" type="text" maxlength="500" placeholder="Opcional" />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button id="closeCashButton" class="danger-action" type="submit">Confirmar fechamento</button>
+              <button id="cancelCloseCashButton" class="secondary-action" type="button">Voltar</button>
+            </div>
+          </form>
+        </section>
+
+        <div id="pdvWorkspace">
+          <div id="saleWorkspace" class="pdv-grid" hidden>
+            <section class="card product-entry-card" aria-labelledby="productEntryTitle">
+              <div class="section-heading">
+                <div>
+                  <h2 id="productEntryTitle">Adicionar itens</h2>
+                  <p>Bipe o código de barras ou busque manualmente.</p>
+                </div>
+              </div>
+
+              <form id="barcodeSaleForm" class="barcode-sale-form">
+                <label for="saleBarcode">Código de barras</label>
+                <div class="cash-input-action">
+                  <input id="saleBarcode" type="text" autocomplete="off" inputmode="numeric" />
+                  <button type="submit">Adicionar</button>
+                </div>
+              </form>
+
+              <form id="productSaleSearchForm" class="cash-search-form">
+                <label for="productSaleSearch">Busca por nome</label>
+                <div class="cash-input-action">
+                  <input id="productSaleSearch" type="search" autocomplete="off" />
+                  <button class="secondary-action" type="submit">Buscar</button>
+                </div>
+              </form>
+              <div id="productSaleResults" class="cash-search-results" aria-live="polite"></div>
+
+              <details class="miscellaneous-panel">
+                <summary>Adicionar Diversos / Outros</summary>
+                <form id="miscellaneousForm">
+                  <div class="form-field">
+                    <label for="miscellaneousDescription">Descrição curta</label>
+                    <input
+                      id="miscellaneousDescription"
+                      type="text"
+                      maxlength="255"
+                      placeholder="Obrigatória para venda fiado"
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label for="miscellaneousPrice">Valor</label>
+                    <div class="currency-input">
+                      <span class="currency-prefix" aria-hidden="true">R$</span>
+                      <input
+                        id="miscellaneousPrice"
+                        type="text"
+                        inputmode="numeric"
+                        autocomplete="off"
+                        placeholder="0,00"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <button type="submit">Adicionar Diversos</button>
+                </form>
+              </details>
+            </section>
+
+            <section class="card cart-card" aria-labelledby="cartTitle">
+              <div class="section-heading">
+                <div>
+                  <h2 id="cartTitle">Carrinho</h2>
+                  <p id="cartItemCount">Nenhum item.</p>
+                </div>
+                <button id="clearCartButton" class="secondary-action compact-button" type="button">
+                  Limpar
+                </button>
+              </div>
+
+              <div class="table-container">
+                <table class="cash-cart-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Item</th>
+                      <th scope="col">Qtd.</th>
+                      <th scope="col">Subtotal</th>
+                      <th scope="col">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cartItems"></tbody>
+                </table>
+              </div>
+
+              <div class="cart-total-line">
+                <span>Total</span>
+                <strong id="cartTotal">R$ 0,00</strong>
+              </div>
+
+              <form id="checkoutForm" class="checkout-form">
+                <div class="form-field">
+                  <label for="saleType">Tipo de venda</label>
+                  <select id="saleType">
+                    <option value="A_VISTA">Venda à vista</option>
+                    <option value="FIADO">Pagar depois / Fiado</option>
+                  </select>
+                </div>
+
+                <div id="paymentFields">
+                  <div class="form-field">
+                    <label for="paymentMethod">Forma de pagamento</label>
+                    <select id="paymentMethod">
+                      <option value="DINHEIRO">Dinheiro</option>
+                      <option value="PIX">Pix — confirmação manual</option>
+                      <option value="DEBITO">Débito — confirmação manual</option>
+                      <option value="CREDITO">Crédito — confirmação manual</option>
+                      <option value="OUTROS">Outros</option>
+                    </select>
+                  </div>
+                  <details class="transaction-reference-panel">
+                    <summary>Referências opcionais da transação</summary>
+                    <div class="cash-reference-grid">
+                      <div class="form-field">
+                        <label for="paymentNsu">NSU</label>
+                        <input id="paymentNsu" type="text" maxlength="100" />
+                      </div>
+                      <div class="form-field">
+                        <label for="paymentAuthorization">Autorização</label>
+                        <input id="paymentAuthorization" type="text" maxlength="100" />
+                      </div>
+                      <div class="form-field full-width">
+                        <label for="paymentReference">Referência</label>
+                        <input id="paymentReference" type="text" maxlength="150" />
+                      </div>
+                    </div>
+                  </details>
+                </div>
+
+                <div id="creditClientFields" hidden>
+                  <div class="form-field">
+                    <label for="creditClientSearch">Cliente do fiado</label>
+                    <div class="cash-input-action">
+                      <input
+                        id="creditClientSearch"
+                        type="search"
+                        autocomplete="off"
+                        placeholder="Nome, matrícula, telefone ou código"
+                      />
+                      <button id="searchCreditClientButton" class="secondary-action" type="button">
+                        Buscar
+                      </button>
+                    </div>
+                  </div>
+                  <div id="creditClientResults" class="cash-search-results" aria-live="polite"></div>
+                  <p id="selectedCreditClient" class="selected-client">Nenhum cliente selecionado.</p>
+                </div>
+
+                <div class="form-field">
+                  <label for="saleNotes">Observações</label>
+                  <textarea id="saleNotes" rows="2" maxlength="500" placeholder="Opcional"></textarea>
+                </div>
+
+                <button id="finishSaleButton" class="finish-sale-button" type="submit">
+                  Confirmar venda
+                </button>
+              </form>
+            </section>
+          </div>
+
+          <section id="cancelSalePanel" class="card cancel-sale-panel" hidden>
+            <h2>Cancelar venda <span id="cancelSaleNumber"></span></h2>
+            <p>Somente administradores podem cancelar. Estoque e financeiro serão revertidos.</p>
+            <form id="cancelSaleForm">
+              <div class="form-field">
+                <label for="cancelSaleReason">Motivo do cancelamento</label>
+                <input id="cancelSaleReason" type="text" maxlength="500" required />
+              </div>
+              <div class="form-actions">
+                <button class="danger-action" type="submit">Confirmar cancelamento</button>
+                <button id="dismissCancelSaleButton" class="secondary-action" type="button">Voltar</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="card recent-sales-card" aria-labelledby="recentSalesTitle">
+            <div class="section-heading">
+              <div>
+                <h2 id="recentSalesTitle">Vendas recentes</h2>
+                <p>Histórico operacional para conferência e cancelamento administrativo.</p>
+              </div>
+              <button id="refreshSalesButton" class="secondary-action compact-button" type="button">
+                Atualizar
+              </button>
+            </div>
+            <div id="recentSales" class="table-container" aria-live="polite"></div>
+          </section>
         </div>
       </section>
     </div>
   </div>
   <script type="module" src="../js/appLayout.js"></script>
+  <script type="module" src="../js/cashApp.js"></script>
 </body>
 </html>

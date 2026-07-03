@@ -9,6 +9,7 @@ import statusRoutes from './routes/statusRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import pageRoutes from './routes/pageRoutes.js';
 import categoriesRoutes from './routes/categoriesRoutes.js';
+import cashRoutes from './routes/cashRoutes.js';
 import clientsRoutes from './routes/clientsRoutes.js';
 import productsRoutes from './routes/productsRoutes.js';
 import cookieMiddleware from './middlewares/cookieMiddleware.js';
@@ -56,6 +57,7 @@ app.use('/', pageRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/status', statusRoutes);
 app.use('/api/v1/categories', categoriesRoutes);
+app.use('/api/v1/cash', cashRoutes);
 app.use('/api/v1/products', productsRoutes);
 app.use('/api/v1/clients', clientsRoutes);
 

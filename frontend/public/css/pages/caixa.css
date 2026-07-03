@@ -1,1 +1,326 @@
-/* The future Caixa interface will be implemented entirely in this stylesheet. */
+.cash-page [hidden] {
+  display: none;
+}
+
+.cash-page-heading,
+.section-heading,
+.cash-input-action,
+.cart-total-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.cash-page-heading > div > h1,
+.section-heading h2,
+.section-heading p,
+.cash-session-card p,
+.cash-close-form p,
+.recent-sales-card p {
+  margin-bottom: 0;
+}
+
+.cash-eyebrow {
+  margin-bottom: var(--space-1);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.cash-session-badge {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+}
+
+.cash-session-badge.open {
+  background: var(--color-success-badge);
+  color: var(--color-success-strong);
+}
+
+.cash-session-badge.closed {
+  background: var(--color-border);
+  color: var(--color-text-subtle);
+}
+
+.cash-session-card {
+  margin-top: var(--space-4);
+}
+
+.cash-inline-form {
+  display: flex;
+  align-items: end;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+.cash-inline-form .form-field {
+  min-width: 210px;
+}
+
+.cash-inline-form input,
+.cash-inline-form button,
+.cash-close-form input,
+.cash-close-form textarea,
+.checkout-form input,
+.checkout-form select,
+.checkout-form textarea,
+.barcode-sale-form input,
+.cash-search-form input,
+.miscellaneous-panel input {
+  margin-bottom: 0;
+}
+
+.cash-grow-field {
+  flex: 1;
+}
+
+.cash-session-details {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: var(--space-6) 0;
+}
+
+.cash-session-details div {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.cash-session-details dt {
+  margin-bottom: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.cash-session-details dd {
+  font-weight: 700;
+}
+
+.cash-close-form {
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.cash-close-grid,
+.cash-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: var(--space-4) 0;
+}
+
+.cash-close-grid .full-width,
+.cash-reference-grid .full-width {
+  grid-column: 1 / -1;
+}
+
+.pdv-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.8fr) minmax(480px, 1.4fr);
+  gap: var(--space-6);
+}
+
+.product-entry-card,
+.cart-card {
+  min-width: 0;
+}
+
+.barcode-sale-form,
+.cash-search-form,
+.miscellaneous-panel,
+.checkout-form {
+  margin-top: var(--space-6);
+}
+
+.cash-input-action {
+  align-items: stretch;
+}
+
+.cash-input-action input {
+  flex: 1;
+  min-width: 0;
+}
+
+.cash-input-action button {
+  flex: 0 0 auto;
+  padding: 0.85rem var(--space-4);
+}
+
+.cash-search-results {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.cash-search-results > p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.cash-result-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+}
+
+.cash-result-row > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.cash-result-row span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-help);
+}
+
+.miscellaneous-panel,
+.transaction-reference-panel {
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.miscellaneous-panel summary,
+.transaction-reference-panel summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.miscellaneous-panel form {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.cash-cart-table td:first-child strong,
+.cash-cart-table td:first-child span {
+  display: block;
+}
+
+.cash-cart-table td:first-child span {
+  margin-top: 0.2rem;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-help);
+}
+
+.empty-cart-cell {
+  padding: var(--space-8);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.quantity-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.quantity-control input {
+  width: 58px;
+  margin: 0;
+  padding: 0.55rem 0.4rem;
+  text-align: center;
+}
+
+.quantity-control button {
+  min-width: 36px;
+}
+
+.cart-total-line {
+  margin-top: var(--space-4);
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--color-sidebar);
+  color: var(--color-surface);
+  font-size: 1.2rem;
+}
+
+.cart-total-line strong {
+  font-size: 1.5rem;
+}
+
+.checkout-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.selected-client {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-border);
+  color: var(--color-text-subtle);
+}
+
+.selected-client.selected {
+  background: var(--color-success-badge);
+  color: var(--color-success-strong);
+  font-weight: 700;
+}
+
+.finish-sale-button {
+  width: 100%;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.cancel-sale-panel {
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-surface);
+}
+
+.recent-sales-card {
+  margin-bottom: var(--space-8);
+}
+
+@media (max-width: 980px) {
+  .pdv-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cash-session-details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .cash-page-heading,
+  .section-heading,
+  .cash-inline-form,
+  .cash-input-action {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cash-inline-form .form-field {
+    min-width: 0;
+  }
+
+  .cash-session-details,
+  .cash-close-grid,
+  .cash-reference-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cash-close-grid .full-width,
+  .cash-reference-grid .full-width {
+    grid-column: auto;
+  }
+
+  .cash-cart-table {
+    min-width: 680px;
+  }
+}
