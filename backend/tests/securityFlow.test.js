@@ -944,6 +944,10 @@ test('fluxo funcional e transacional do Caixa sem acessar o banco', async (t) =>
       assert.equal(parseFixedDecimal('4000.0000'), 40000000n);
       assert.equal(formatFixedDecimal(45000n), '4.5000');
       assert.equal(multiplyFixedDecimal(parseFixedDecimal('4.50'), 3n), 135000n);
+      assert.equal(
+        formatFixedDecimal(parseFixedDecimal('20.00') - parseFixedDecimal('13.50')),
+        '6.5000'
+      );
     });
 
     await t.test('confirma venda à vista usando preço e estoque travados no servidor', async () => {
@@ -1204,7 +1208,8 @@ test('fluxo funcional e transacional do Caixa sem acessar o banco', async (t) =>
         'app/caixa.html',
         'js/cashApp.js',
         'js/cashApi.js',
-        'js/fixedMoney.js'
+        'js/fixedMoney.js',
+        'css/pages/caixa.css'
       ].map((file) => fs.readFile(path.join(frontendPath, file), 'utf8')));
       const source = files.join('\n');
       assert.doesNotMatch(files[0], /\son[a-z]+\s*=/i);
@@ -1212,6 +1217,19 @@ test('fluxo funcional e transacional do Caixa sem acessar o banco', async (t) =>
       assert.match(files[1], /barcodeSaleForm\.addEventListener\('submit'/);
       assert.match(files[1], /event\.preventDefault\(\)/);
       assert.match(files[1], /cashApi\.getProductByBarcode\(barcode\)/);
+      assert.match(files[0], /Passe ou digite o código de barras aqui/);
+      assert.match(files[0], /id="quickProducts"/);
+      assert.match(files[0], /data-sale-type="A_VISTA"/);
+      assert.match(files[0], /data-sale-type="FIADO"/);
+      assert.match(files[0], /id="cashReceived"/);
+      assert.match(files[0], /id="cashChange"/);
+      assert.match(files[1], /cashApi\.searchProducts\(''\)/);
+      assert.match(files[1], /received < getCartTotal\(\)/);
+      assert.doesNotMatch(files[1], /valor_recebido/);
+      assert.match(files[4], /\/\* Sidebar \*\//);
+      assert.match(files[4], /\/\* Quick products \*\//);
+      assert.match(files[4], /\/\* Responsiveness \*\//);
+      assert.doesNotMatch(files[4], /!important/i);
     });
   } finally {
     Object.assign(cashRepository, originalRepository);

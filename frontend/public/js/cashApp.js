@@ -5,6 +5,9 @@ import { decimalToUnits, factor, formatBRL, multiplyMoney, unitsToDecimal } from
 
 const cashMessage = document.getElementById('cashMessage');
 const cashSessionBadge = document.getElementById('cashSessionBadge');
+const cashSessionCard = document.getElementById('cashSessionCard');
+const cashSessionTitle = document.getElementById('cashSessionTitle');
+const cashTerminalCard = document.querySelector('.cash-terminal-card');
 const openCashForm = document.getElementById('openCashForm');
 const openingAmount = document.getElementById('openingAmount');
 const openingNotes = document.getElementById('openingNotes');
@@ -12,6 +15,7 @@ const openCashButton = document.getElementById('openCashButton');
 const openCashSummary = document.getElementById('openCashSummary');
 const sessionTerminal = document.getElementById('sessionTerminal');
 const sessionOpenedBy = document.getElementById('sessionOpenedBy');
+const sessionOpenedAt = document.getElementById('sessionOpenedAt');
 const sessionOpeningAmount = document.getElementById('sessionOpeningAmount');
 const sessionExpectedAmount = document.getElementById('sessionExpectedAmount');
 const showCloseCashButton = document.getElementById('showCloseCashButton');
@@ -27,6 +31,7 @@ const saleBarcode = document.getElementById('saleBarcode');
 const productSaleSearchForm = document.getElementById('productSaleSearchForm');
 const productSaleSearch = document.getElementById('productSaleSearch');
 const productSaleResults = document.getElementById('productSaleResults');
+const quickProducts = document.getElementById('quickProducts');
 const miscellaneousForm = document.getElementById('miscellaneousForm');
 const miscellaneousDescription = document.getElementById('miscellaneousDescription');
 const miscellaneousPrice = document.getElementById('miscellaneousPrice');
@@ -36,8 +41,13 @@ const cartTotal = document.getElementById('cartTotal');
 const clearCartButton = document.getElementById('clearCartButton');
 const checkoutForm = document.getElementById('checkoutForm');
 const saleType = document.getElementById('saleType');
+const saleTypeButtons = document.querySelectorAll('[data-sale-type]');
 const paymentFields = document.getElementById('paymentFields');
 const paymentMethod = document.getElementById('paymentMethod');
+const cashReceivedFields = document.getElementById('cashReceivedFields');
+const cashReceived = document.getElementById('cashReceived');
+const cashChange = document.getElementById('cashChange');
+const cashPaymentWarning = document.getElementById('cashPaymentWarning');
 const paymentNsu = document.getElementById('paymentNsu');
 const paymentAuthorization = document.getElementById('paymentAuthorization');
 const paymentReference = document.getElementById('paymentReference');
@@ -66,6 +76,7 @@ let cart = [];
 bindCurrencyInput(openingAmount);
 bindCurrencyInput(closingAmount);
 bindCurrencyInput(miscellaneousPrice);
+bindCurrencyInput(cashReceived);
 
 const showMessage = (message, isError = false) => {
   cashMessage.textContent = message;
@@ -84,6 +95,76 @@ const getCartTotal = () => cart.reduce(
   (total, item) => total + multiplyMoney(item.unitPrice, item.quantity),
   0n
 );
+
+const getCashReceivedUnits = () => {
+  const decimalValue = formattedCurrencyToDecimal(cashReceived.value);
+  return decimalValue === null ? null : decimalToUnits(decimalValue);
+};
+
+const resetCashReceived = () => {
+  cashReceived.value = '';
+  cashReceived.dataset.currencyDigits = '';
+};
+
+const isCashPayment = () => (
+  saleType.value === 'A_VISTA' && paymentMethod.value === 'DINHEIRO'
+);
+
+const updateFinishSaleButton = () => {
+  let canFinish = cart.length > 0;
+  if (canFinish && isCashPayment()) {
+    const received = getCashReceivedUnits();
+    canFinish = received !== null && received >= getCartTotal();
+  }
+  finishSaleButton.disabled = !canFinish;
+};
+
+const updateCashChange = () => {
+  const shouldShowCashFields = isCashPayment();
+  cashReceivedFields.hidden = !shouldShowCashFields;
+
+  if (!shouldShowCashFields) {
+    updateFinishSaleButton();
+    return;
+  }
+
+  const total = getCartTotal();
+  const received = getCashReceivedUnits();
+  const display = cashChange.parentElement;
+  display.classList.remove('insufficient');
+
+  if (received === null) {
+    cashChange.textContent = formatBRL(0n);
+    cashPaymentWarning.textContent = 'Informe o valor recebido.';
+    if (total > 0n) display.classList.add('insufficient');
+  } else if (received < total) {
+    cashChange.textContent = formatBRL(0n);
+    cashPaymentWarning.textContent = `Faltam ${formatBRL(total - received)}.`;
+    display.classList.add('insufficient');
+  } else {
+    cashChange.textContent = formatBRL(received - total);
+    cashPaymentWarning.textContent = 'Valor suficiente para concluir a venda.';
+  }
+
+  updateFinishSaleButton();
+};
+
+const syncSaleTypeButtons = () => {
+  saleTypeButtons.forEach((button) => {
+    const isActive = button.dataset.saleType === saleType.value;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
+};
+
+const updateCheckoutMode = ({ focusClient = false } = {}) => {
+  const isCreditSale = saleType.value === 'FIADO';
+  paymentFields.hidden = isCreditSale;
+  creditClientFields.hidden = !isCreditSale;
+  syncSaleTypeButtons();
+  updateCashChange();
+  if (isCreditSale && focusClient) creditClientSearch.focus();
+};
 
 const hasAvailableStock = (item, quantity) => (
   item.type === 'DIVERSOS'
@@ -109,6 +190,7 @@ const updateItemQuantity = (itemId, quantity) => {
 
 const removeCartItem = (itemId) => {
   cart = cart.filter((item) => item.id !== itemId);
+  if (!cart.length) resetCashReceived();
   renderCart();
 };
 
@@ -117,7 +199,7 @@ const renderCart = () => {
   if (!cart.length) {
     const row = document.createElement('tr');
     const emptyCell = document.createElement('td');
-    emptyCell.colSpan = 4;
+    emptyCell.colSpan = 5;
     emptyCell.className = 'empty-cart-cell';
     emptyCell.textContent = 'Carrinho vazio. Bipe um produto para começar.';
     row.appendChild(emptyCell);
@@ -129,9 +211,11 @@ const renderCart = () => {
     const itemCell = document.createElement('td');
     const itemName = document.createElement('strong');
     itemName.textContent = item.name;
-    const itemPrice = document.createElement('span');
-    itemPrice.textContent = formatBRL(item.unitPrice);
-    itemCell.append(itemName, itemPrice);
+    const itemMeta = document.createElement('span');
+    itemMeta.textContent = item.type === 'PRODUTO'
+      ? `Código: ${item.barcode || 'não informado'}`
+      : 'Item sem código de barras';
+    itemCell.append(itemName, itemMeta);
 
     const quantityCell = document.createElement('td');
     const quantityControl = document.createElement('div');
@@ -160,27 +244,29 @@ const renderCart = () => {
     quantityControl.append(decreaseButton, quantityInput, increaseButton);
     quantityCell.appendChild(quantityControl);
 
+    const unitPriceCell = createCell(formatBRL(item.unitPrice));
     const subtotal = multiplyMoney(item.unitPrice, item.quantity);
     const subtotalCell = createCell(formatBRL(subtotal));
     const actionCell = document.createElement('td');
     const removeButton = document.createElement('button');
     removeButton.type = 'button';
-    removeButton.className = 'danger-action compact-button';
-    removeButton.textContent = 'Remover';
+    removeButton.className = 'danger-action compact-button cart-remove-button';
+    removeButton.textContent = '×';
+    removeButton.setAttribute('aria-label', `Remover ${item.name} do carrinho`);
     removeButton.addEventListener('click', () => removeCartItem(item.id));
     actionCell.appendChild(removeButton);
 
-    row.append(itemCell, quantityCell, subtotalCell, actionCell);
+    row.append(itemCell, quantityCell, unitPriceCell, subtotalCell, actionCell);
     cartItems.appendChild(row);
   });
 
   const itemQuantity = cart.reduce((total, item) => total + item.quantity, 0);
   cartItemCount.textContent = itemQuantity
-    ? `${itemQuantity} ${itemQuantity === 1 ? 'unidade' : 'unidades'} no carrinho.`
-    : 'Nenhum item.';
+    ? `${itemQuantity} ${itemQuantity === 1 ? 'item' : 'itens'}`
+    : '0 itens';
   cartTotal.textContent = formatBRL(getCartTotal());
   clearCartButton.disabled = !cart.length;
-  finishSaleButton.disabled = !cart.length;
+  updateCashChange();
 };
 
 const addProductToCart = (product) => {
@@ -244,6 +330,56 @@ const renderProductResults = (products) => {
   });
 };
 
+const renderQuickProducts = (products) => {
+  quickProducts.replaceChildren();
+  const visibleProducts = products.slice(0, 5);
+  if (!visibleProducts.length) {
+    const empty = document.createElement('p');
+    empty.className = 'quick-products-empty';
+    empty.textContent = 'Nenhum produto ativo disponível para acesso rápido.';
+    quickProducts.appendChild(empty);
+    return;
+  }
+
+  visibleProducts.forEach((product) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'quick-product-card';
+    const visual = document.createElement('span');
+    visual.className = 'quick-product-visual';
+    visual.setAttribute('aria-hidden', 'true');
+    const name = document.createElement('strong');
+    name.textContent = product.nome;
+    const price = document.createElement('span');
+    price.className = 'quick-product-price';
+    price.textContent = formatBRL(product.preco_venda);
+    const stock = document.createElement('small');
+    stock.textContent = `Estoque: ${product.estoque_atual}`;
+    button.append(visual, name, price, stock);
+    button.addEventListener('click', () => addProductToCart(product));
+    quickProducts.appendChild(button);
+  });
+
+  if (visibleProducts.length < 5) {
+    const note = document.createElement('p');
+    note.className = 'quick-products-note';
+    note.textContent = 'Mais produtos ativos aparecerão aqui conforme o cadastro crescer.';
+    quickProducts.appendChild(note);
+  }
+};
+
+const loadQuickProducts = async () => {
+  try {
+    renderQuickProducts(await cashApi.searchProducts(''));
+  } catch (error) {
+    quickProducts.replaceChildren();
+    const message = document.createElement('p');
+    message.className = 'quick-products-empty';
+    message.textContent = `Não foi possível carregar os produtos rápidos: ${error.message}`;
+    quickProducts.appendChild(message);
+  }
+};
+
 const selectClient = (client) => {
   selectedClient = client;
   selectedCreditClient.textContent = `Selecionado: ${client.nome} · ${client.codigo}`;
@@ -284,14 +420,14 @@ const resetCheckout = () => {
   paymentNsu.value = '';
   paymentAuthorization.value = '';
   paymentReference.value = '';
+  resetCashReceived();
   saleNotes.value = '';
   selectedClient = null;
   selectedCreditClient.textContent = 'Nenhum cliente selecionado.';
   selectedCreditClient.className = 'selected-client';
   creditClientSearch.value = '';
   creditClientResults.replaceChildren();
-  paymentFields.hidden = false;
-  creditClientFields.hidden = true;
+  updateCheckoutMode();
 };
 
 const renderSession = () => {
@@ -300,10 +436,17 @@ const renderSession = () => {
   openCashSummary.hidden = !isOpen;
   saleWorkspace.hidden = !isOpen;
   closeCashForm.hidden = true;
+  cashSessionCard.hidden = isOpen;
+  showCloseCashButton.hidden = !isOpen;
+  cashTerminalCard.classList.toggle('is-open', isOpen);
+  cashSessionTitle.textContent = 'Abrir caixa';
 
   if (!isOpen) {
     cashSessionBadge.textContent = 'Caixa fechado';
     cashSessionBadge.className = 'cash-session-badge closed';
+    sessionTerminal.textContent = 'CAIXA-01';
+    sessionOpenedBy.textContent = currentUser?.nome || 'Usuário logado';
+    sessionOpenedAt.textContent = 'Aguardando abertura';
     return;
   }
 
@@ -311,6 +454,10 @@ const renderSession = () => {
   cashSessionBadge.className = 'cash-session-badge open';
   sessionTerminal.textContent = currentSession.terminal_codigo;
   sessionOpenedBy.textContent = currentSession.usuario_abertura_nome;
+  const openedAt = new Date(currentSession.aberto_em);
+  sessionOpenedAt.textContent = Number.isNaN(openedAt.getTime())
+    ? 'Caixa aberto'
+    : `Aberto às ${openedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
   sessionOpeningAmount.textContent = formatBRL(currentSession.valor_abertura);
   sessionExpectedAmount.textContent = formatBRL(currentSession.valor_esperado_atual);
   saleBarcode.focus();
@@ -429,12 +576,17 @@ showCloseCashButton.addEventListener('click', () => {
     showMessage('Finalize ou limpe o carrinho antes de fechar o caixa.', true);
     return;
   }
+  cashSessionCard.hidden = false;
+  cashSessionTitle.textContent = 'Fechar caixa';
   closeCashForm.hidden = false;
   closingAmount.focus();
+  cashSessionCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 cancelCloseCashButton.addEventListener('click', () => {
   closeCashForm.hidden = true;
+  cashSessionCard.hidden = Boolean(currentSession);
+  cashSessionTitle.textContent = 'Abrir caixa';
 });
 
 closeCashForm.addEventListener('submit', async (event) => {
@@ -514,17 +666,27 @@ miscellaneousForm.addEventListener('submit', (event) => {
 
 clearCartButton.addEventListener('click', () => {
   cart = [];
+  resetCashReceived();
   renderCart();
   showMessage('Carrinho limpo.');
   saleBarcode.focus();
 });
 
 saleType.addEventListener('change', () => {
-  const isCreditSale = saleType.value === 'FIADO';
-  paymentFields.hidden = isCreditSale;
-  creditClientFields.hidden = !isCreditSale;
-  if (isCreditSale) creditClientSearch.focus();
+  updateCheckoutMode({ focusClient: true });
 });
+
+saleTypeButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    saleType.value = button.dataset.saleType;
+    saleType.dispatchEvent(new Event('change'));
+  });
+});
+
+paymentMethod.addEventListener('change', updateCashChange);
+cashReceived.addEventListener('input', updateCashChange);
+cashReceived.addEventListener('keyup', updateCashChange);
+cashReceived.addEventListener('paste', updateCashChange);
 
 searchCreditClientButton.addEventListener('click', async () => {
   try {
@@ -558,6 +720,15 @@ checkoutForm.addEventListener('submit', async (event) => {
     showMessage('Informe a descrição de todos os itens Diversos da venda fiado.', true);
     return;
   }
+  if (isCashPayment()) {
+    const received = getCashReceivedUnits();
+    if (received === null || received < getCartTotal()) {
+      showMessage('O valor recebido em dinheiro não pode ser menor que o total da venda.', true);
+      cashReceived.focus();
+      updateCashChange();
+      return;
+    }
+  }
 
   finishSaleButton.disabled = true;
   const payload = {
@@ -588,13 +759,13 @@ checkoutForm.addEventListener('submit', async (event) => {
     renderCart();
     resetCheckout();
     productSaleResults.replaceChildren();
-    await Promise.all([loadSession(), loadRecentSales()]);
+    await Promise.all([loadSession(), loadRecentSales(), loadQuickProducts()]);
     showMessage(`Venda #${sale.id} confirmada com sucesso.`);
     saleBarcode.focus();
   } catch (error) {
     showMessage(error.message, true);
   } finally {
-    finishSaleButton.disabled = !cart.length;
+    updateFinishSaleButton();
   }
 });
 
@@ -609,7 +780,7 @@ cancelSaleForm.addEventListener('submit', async (event) => {
     await cashApi.cancelSale(selectedSaleForCancellation.id, cancelSaleReason.value.trim());
     cancelSalePanel.hidden = true;
     selectedSaleForCancellation = null;
-    await Promise.all([loadSession(), loadRecentSales()]);
+    await Promise.all([loadSession(), loadRecentSales(), loadQuickProducts()]);
     showMessage('Venda cancelada e movimentos revertidos com sucesso.');
   } catch (error) {
     showMessage(error.message, true);
@@ -626,9 +797,15 @@ dismissCancelSaleButton.addEventListener('click', () => {
 window.addEventListener('DOMContentLoaded', async () => {
   renderCart();
   try {
-    const [{ user }] = await Promise.all([authApi.me(), loadSession(), loadRecentSales()]);
+    const [{ user }] = await Promise.all([
+      authApi.me(),
+      loadSession(),
+      loadRecentSales(),
+      loadQuickProducts()
+    ]);
     currentUser = user;
-    await loadRecentSales();
+    renderSession();
+    updateCheckoutMode();
     if (currentSession) saleBarcode.focus();
   } catch (error) {
     showMessage(`Não foi possível iniciar o Caixa: ${error.message}`, true);

@@ -7,44 +7,65 @@
   <link rel="stylesheet" href="../css/main.css" />
   <link rel="stylesheet" href="../css/pages/caixa.css" />
 </head>
-<body>
+<body class="cash-screen">
   <div class="admin-layout">
-    <aside class="side-menu">
-      <div class="brand">Cantina</div>
-      <nav>
-        <a href="/app/caixa">Caixa</a>
-        <a href="/app/produtos">Produtos</a>
-        <a href="/app/categorias">Categorias</a>
-        <a href="/app/estoque">Estoque</a>
-        <a href="/app/clientes">Clientes</a>
-        <a href="/app/fiado">Fiado</a>
-        <a href="/app/relatorios">Relatórios</a>
-        <a href="/app/configuracoes">Configurações</a>
+    <aside class="side-menu cash-sidebar">
+      <div class="brand cash-brand">
+        <span class="cash-brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M3 4h2l2.2 10.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 1.9-1.4L21 8H7" />
+            <circle cx="10" cy="19" r="1.4" />
+            <circle cx="18" cy="19" r="1.4" />
+          </svg>
+        </span>
+        <span>Cantina</span>
+      </div>
+      <nav aria-label="Navegação principal">
+        <a href="/app/caixa" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v12H3zM7 10h6M7 14h4M17 10h.01M17 14h.01" /></svg><span>Caixa</span></a>
+        <a href="/app/produtos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5zM4 7.5l8 4.5 8-4.5M12 12v9" /></svg><span>Produtos</span></a>
+        <a href="/app/categorias"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v4H4zM14 15h6v4h-6z" /></svg><span>Categorias</span></a>
+        <a href="/app/estoque"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v12H4zM7 4h10l3 4H4zM9 12h6" /></svg><span>Estoque</span></a>
+        <a href="/app/clientes"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3" /><path d="M5 20c.5-4 2.8-6 7-6s6.5 2 7 6" /></svg><span>Clientes</span></a>
+        <a href="/app/fiado"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" /></svg><span>Fiado</span></a>
+        <a href="/app/relatorios"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7" /></svg><span>Relatórios</span></a>
+        <a href="/app/configuracoes"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" /></svg><span>Configurações</span></a>
       </nav>
+
+      <section class="cash-terminal-card" aria-label="Terminal de caixa">
+        <div class="cash-terminal-label"><span>Terminal atual</span><span class="cash-terminal-dot" aria-hidden="true"></span></div>
+        <strong id="sessionTerminal">CAIXA-01</strong>
+        <div class="cash-terminal-operator">
+          <span class="cash-operator-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3" /><path d="M6 20c.5-3.8 2.5-5.7 6-5.7s5.5 1.9 6 5.7" /></svg></span>
+          <div><span id="sessionOpenedBy">Usuário logado</span><small id="sessionOpenedAt">Aguardando abertura</small></div>
+        </div>
+        <div id="openCashSummary" class="cash-terminal-values" hidden>
+          <div><span>Abertura</span><strong id="sessionOpeningAmount">—</strong></div>
+          <div><span>Esperado</span><strong id="sessionExpectedAmount">—</strong></div>
+        </div>
+        <button id="showCloseCashButton" class="cash-close-sidebar-button" type="button" hidden>Fechar caixa</button>
+      </section>
     </aside>
 
     <div class="main-content">
-      <header class="topbar">
-        <div>Bem-vindo, <span id="userName"></span></div>
-        <button id="logoutButton">Sair</button>
+      <header class="topbar cash-topbar">
+        <div class="cash-topbar-operator">
+          <span class="cash-operator-avatar light" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3" /><path d="M6 20c.5-3.8 2.5-5.7 6-5.7s5.5 1.9 6 5.7" /></svg></span>
+          <div><small>Bem-vindo,</small><strong id="userName"></strong></div>
+        </div>
+        <div class="cash-topbar-actions">
+          <p id="cashSessionBadge" class="cash-session-badge">Consultando caixa...</p>
+          <button id="logoutButton" class="secondary-action" type="button">Sair</button>
+        </div>
       </header>
 
       <section class="page-content cash-page" id="cashPage">
-        <div class="cash-page-heading">
-          <div>
-            <p class="cash-eyebrow">PDV interno</p>
-            <h1>Caixa</h1>
-          </div>
-          <p id="cashSessionBadge" class="cash-session-badge">Consultando caixa...</p>
-        </div>
-
         <p id="cashMessage" class="message" aria-live="polite"></p>
 
-        <section class="card cash-session-card" aria-labelledby="cashSessionTitle">
+        <section id="cashSessionCard" class="card cash-session-card" aria-labelledby="cashSessionTitle">
           <div class="section-heading">
             <div>
-              <h2 id="cashSessionTitle">Sessão de caixa</h2>
-              <p>Abra o caixa para liberar o carrinho e registrar vendas.</p>
+              <h2 id="cashSessionTitle">Abrir caixa</h2>
+              <p>Informe o valor inicial em dinheiro para liberar o atendimento.</p>
             </div>
           </div>
 
@@ -69,18 +90,6 @@
             </div>
             <button id="openCashButton" type="submit">Abrir caixa</button>
           </form>
-
-          <div id="openCashSummary" hidden>
-            <dl class="cash-session-details">
-              <div><dt>Terminal</dt><dd id="sessionTerminal">—</dd></div>
-              <div><dt>Aberto por</dt><dd id="sessionOpenedBy">—</dd></div>
-              <div><dt>Abertura</dt><dd id="sessionOpeningAmount">—</dd></div>
-              <div><dt>Dinheiro esperado</dt><dd id="sessionExpectedAmount">—</dd></div>
-            </dl>
-            <button id="showCloseCashButton" class="secondary-action" type="button">
-              Fechar caixa
-            </button>
-          </div>
 
           <form id="closeCashForm" class="cash-close-form" hidden>
             <h3>Conferência de fechamento</h3>
@@ -126,30 +135,52 @@
             <section class="card product-entry-card" aria-labelledby="productEntryTitle">
               <div class="section-heading">
                 <div>
-                  <h2 id="productEntryTitle">Adicionar itens</h2>
-                  <p>Bipe o código de barras ou busque manualmente.</p>
+                  <h2 id="productEntryTitle">Adicionar produtos</h2>
                 </div>
               </div>
 
               <form id="barcodeSaleForm" class="barcode-sale-form">
-                <label for="saleBarcode">Código de barras</label>
-                <div class="cash-input-action">
-                  <input id="saleBarcode" type="text" autocomplete="off" inputmode="numeric" />
+                <label for="saleBarcode">Bipar código / código de barras</label>
+                <div class="scanner-input-wrap">
+                  <span class="scanner-input-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M4 5v14M7 5v14M10 5v14M14 5v14M17 5v14M20 5v14" /></svg>
+                  </span>
+                  <input
+                    id="saleBarcode"
+                    type="text"
+                    autocomplete="off"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="Passe ou digite o código de barras aqui"
+                  />
                   <button type="submit">Adicionar</button>
                 </div>
+                <p class="scanner-help">Leitor USB funciona como teclado</p>
               </form>
 
               <form id="productSaleSearchForm" class="cash-search-form">
-                <label for="productSaleSearch">Busca por nome</label>
+                <label for="productSaleSearch">Buscar por nome do produto</label>
                 <div class="cash-input-action">
-                  <input id="productSaleSearch" type="search" autocomplete="off" />
+                  <input id="productSaleSearch" type="search" autocomplete="off" placeholder="Digite o nome do produto" />
                   <button class="secondary-action" type="submit">Buscar</button>
                 </div>
               </form>
               <div id="productSaleResults" class="cash-search-results" aria-live="polite"></div>
 
+              <section class="quick-products-section" aria-labelledby="quickProductsTitle">
+                <div class="quick-products-heading">
+                  <div>
+                    <h3 id="quickProductsTitle">Produtos rápidos</h3>
+                    <p>Produtos ativos disponíveis para adicionar com um clique.</p>
+                  </div>
+                </div>
+                <div id="quickProducts" class="quick-products-grid" aria-live="polite">
+                  <p class="quick-products-empty">Carregando produtos...</p>
+                </div>
+              </section>
+
               <details class="miscellaneous-panel">
-                <summary>Adicionar Diversos / Outros</summary>
+                <summary><span>Diversos / Outros</span><small>Itens sem código de barras ou serviços</small></summary>
                 <form id="miscellaneousForm">
                   <div class="form-field">
                     <label for="miscellaneousDescription">Descrição curta</label>
@@ -180,24 +211,25 @@
             </section>
 
             <section class="card cart-card" aria-labelledby="cartTitle">
-              <div class="section-heading">
+              <div class="section-heading cart-heading">
                 <div>
-                  <h2 id="cartTitle">Carrinho</h2>
-                  <p id="cartItemCount">Nenhum item.</p>
+                  <h2 id="cartTitle">Carrinho de compras</h2>
                 </div>
-                <button id="clearCartButton" class="secondary-action compact-button" type="button">
-                  Limpar
-                </button>
+                <div class="cart-heading-actions">
+                  <p id="cartItemCount">Nenhum item.</p>
+                  <button id="clearCartButton" class="secondary-action compact-button" type="button">Limpar</button>
+                </div>
               </div>
 
-              <div class="table-container">
+              <div class="table-container cart-table-container">
                 <table class="cash-cart-table">
                   <thead>
                     <tr>
-                      <th scope="col">Item</th>
+                      <th scope="col">Produto</th>
                       <th scope="col">Qtd.</th>
+                      <th scope="col">Unitário</th>
                       <th scope="col">Subtotal</th>
-                      <th scope="col">Ação</th>
+                      <th scope="col">Remover</th>
                     </tr>
                   </thead>
                   <tbody id="cartItems"></tbody>
@@ -205,20 +237,25 @@
               </div>
 
               <div class="cart-total-line">
-                <span>Total</span>
+                <span>Total da venda</span>
                 <strong id="cartTotal">R$ 0,00</strong>
               </div>
 
               <form id="checkoutForm" class="checkout-form">
-                <div class="form-field">
-                  <label for="saleType">Tipo de venda</label>
-                  <select id="saleType">
+                <div class="checkout-heading"><h3>Detalhes da venda</h3></div>
+                <fieldset class="sale-type-fieldset">
+                  <legend>Tipo de venda</legend>
+                  <div class="sale-type-segments" role="group" aria-label="Tipo de venda">
+                    <button id="cashSaleTypeButton" class="sale-type-button active" type="button" data-sale-type="A_VISTA" aria-pressed="true">Venda à vista</button>
+                    <button id="creditSaleTypeButton" class="sale-type-button" type="button" data-sale-type="FIADO" aria-pressed="false">Pagar depois / Fiado</button>
+                  </div>
+                  <select id="saleType" class="cash-technical-select" aria-label="Tipo de venda selecionado" tabindex="-1">
                     <option value="A_VISTA">Venda à vista</option>
                     <option value="FIADO">Pagar depois / Fiado</option>
                   </select>
-                </div>
+                </fieldset>
 
-                <div id="paymentFields">
+                <div id="paymentFields" class="payment-panel">
                   <div class="form-field">
                     <label for="paymentMethod">Forma de pagamento</label>
                     <select id="paymentMethod">
@@ -228,6 +265,20 @@
                       <option value="CREDITO">Crédito — confirmação manual</option>
                       <option value="OUTROS">Outros</option>
                     </select>
+                  </div>
+                  <div id="cashReceivedFields" class="cash-received-panel">
+                    <div class="form-field">
+                      <label for="cashReceived">Valor recebido</label>
+                      <div class="currency-input">
+                        <span class="currency-prefix" aria-hidden="true">R$</span>
+                        <input id="cashReceived" type="text" inputmode="numeric" autocomplete="off" placeholder="0,00" />
+                      </div>
+                    </div>
+                    <div class="cash-change-display" aria-live="polite">
+                      <span>Troco</span>
+                      <strong id="cashChange">R$ 0,00</strong>
+                      <small id="cashPaymentWarning">Informe o valor recebido.</small>
+                    </div>
                   </div>
                   <details class="transaction-reference-panel">
                     <summary>Referências opcionais da transação</summary>
@@ -248,7 +299,11 @@
                   </details>
                 </div>
 
-                <div id="creditClientFields" hidden>
+                <div id="creditClientFields" class="credit-client-panel" hidden>
+                  <div class="credit-client-heading">
+                    <strong>Cliente responsável pelo fiado</strong>
+                    <span>Obrigatório para registrar a venda em aberto.</span>
+                  </div>
                   <div class="form-field">
                     <label for="creditClientSearch">Cliente do fiado</label>
                     <div class="cash-input-action">
