@@ -46,6 +46,12 @@ button:hover {
   background: #1d4ed8;
 }
 
+.admin-form {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
 .card {
   margin-top: 1.75rem;
   padding: 1.75rem;

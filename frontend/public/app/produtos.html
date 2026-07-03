@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Produtos - Cantina</title>
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="side-menu">
+      <div class="brand">Cantina</div>
+      <nav>
+        <a href="/app/caixa">Caixa</a>
+        <a href="/app/produtos">Produtos</a>
+        <a href="/app/categorias">Categorias</a>
+        <a href="/app/estoque">Estoque</a>
+        <a href="/app/clientes">Clientes</a>
+        <a href="/app/fiado">Fiado</a>
+        <a href="/app/relatorios">Relatórios</a>
+        <a href="/app/configuracoes">Configurações</a>
+      </nav>
+    </aside>
+
+    <div class="main-content">
+      <header class="topbar">
+        <div>Bem-vindo, <span id="userName"></span></div>
+        <button id="logoutButton">Sair</button>
+      </header>
+
+      <section class="page-content" id="productAdminPage">
+        <h1>Produtos</h1>
+        <form id="productForm" class="admin-form">
+          <label for="productName">Nome</label>
+          <input id="productName" type="text" required />
+
+          <label for="productBarcode">Código de barras</label>
+          <input id="productBarcode" type="text" placeholder="Opcional" />
+
+          <label for="productCategory">Categoria</label>
+          <select id="productCategory"></select>
+
+          <label for="productDescription">Descrição</label>
+          <textarea id="productDescription" rows="3" placeholder="Opcional"></textarea>
+
+          <label for="productPrice">Preço de venda</label>
+          <input id="productPrice" type="number" step="0.01" min="0" required />
+
+          <label for="productCost">Custo</label>
+          <input id="productCost" type="number" step="0.01" min="0" />
+
+          <label for="productStock">Estoque inicial</label>
+          <input id="productStock" type="number" step="0.01" min="0" required />
+
+          <label for="productMinStock">Estoque mínimo</label>
+          <input id="productMinStock" type="number" step="0.01" min="0" value="0" required />
+
+          <button type="submit">Cadastrar produto</button>
+        </form>
+
+        <p id="productMessage" class="message"></p>
+
+        <section class="card">
+          <h2>Pesquisar produtos</h2>
+          <form id="productSearchForm">
+            <input id="productSearch" type="search" placeholder="Nome ou código de barras" />
+            <button type="submit">Buscar</button>
+          </form>
+          <div id="productList"></div>
+        </section>
+      </section>
+    </div>
+  </div>
+  <script type="module" src="../js/appLayout.js"></script>
+  <script type="module" src="../js/productsApp.js"></script>
+</body>
+</html>

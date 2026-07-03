@@ -6,8 +6,11 @@ import cors from 'cors';
 import morgan from 'morgan';
 import env from './config/env.js';
 import statusRoutes from './routes/statusRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import pageRoutes from './routes/pageRoutes.js';
 import categoriesRoutes from './routes/categoriesRoutes.js';
 import productsRoutes from './routes/productsRoutes.js';
+import cookieMiddleware from './middlewares/cookieMiddleware.js';
 import notFoundMiddleware from './middlewares/notFoundMiddleware.js';
 import errorHandlerMiddleware from './middlewares/errorHandlerMiddleware.js';
 
@@ -19,19 +22,20 @@ const app = express();
 
 app.use(helmet());
 app.use(express.json());
+app.use(cookieMiddleware);
 app.use(
   cors({
     origin: env.corsOrigin,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true
   })
 );
 app.use(morgan('dev'));
 
 app.use(express.static(frontendPath));
-app.get('/', (req, res) => {
-  res.sendFile(path.join(frontendPath, 'index.html'));
-});
+app.use('/', pageRoutes);
 
+app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/status', statusRoutes);
 app.use('/api/v1/categories', categoriesRoutes);
 app.use('/api/v1/products', productsRoutes);

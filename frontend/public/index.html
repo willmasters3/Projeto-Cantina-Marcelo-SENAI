@@ -7,60 +7,13 @@
   <link rel="stylesheet" href="css/main.css" />
 </head>
 <body>
-  <main class="container">
-    <h1>Projeto Cantina</h1>
-    <section class="card">
-      <h2>Cadastro de categorias</h2>
-      <form id="categoryForm">
-        <label for="categoryName">Nome da categoria</label>
-        <input id="categoryName" type="text" placeholder="Ex: Bebidas" required />
-        <button type="submit">Cadastrar categoria</button>
-      </form>
-      <p id="categoryMessage" class="message"></p>
-    </section>
-
-    <section class="card">
-      <h2>Cadastro de produtos</h2>
-      <form id="productForm">
-        <label for="productName">Nome</label>
-        <input id="productName" type="text" required />
-
-        <label for="productBarcode">Código de barras</label>
-        <input id="productBarcode" type="text" placeholder="Opcional" />
-
-        <label for="productCategory">Categoria</label>
-        <select id="productCategory"></select>
-
-        <label for="productDescription">Descrição</label>
-        <textarea id="productDescription" rows="3" placeholder="Opcional"></textarea>
-
-        <label for="productPrice">Preço de venda</label>
-        <input id="productPrice" type="number" step="0.01" min="0" required />
-
-        <label for="productCost">Custo</label>
-        <input id="productCost" type="number" step="0.01" min="0" />
-
-        <label for="productStock">Estoque inicial</label>
-        <input id="productStock" type="number" step="0.01" min="0" required />
-
-        <label for="productMinStock">Estoque mínimo</label>
-        <input id="productMinStock" type="number" step="0.01" min="0" value="0" required />
-
-        <button type="submit">Cadastrar produto</button>
-      </form>
-      <p id="productMessage" class="message"></p>
-    </section>
-
-    <section class="card">
-      <h2>Pesquisar produtos</h2>
-      <form id="productSearchForm">
-        <input id="productSearch" type="search" placeholder="Nome ou código de barras" />
-        <button type="submit">Buscar</button>
-      </form>
-      <div id="productList"></div>
-    </section>
+  <main class="container auth-container">
+    <h1>Bem-vindo ao Projeto Cantina</h1>
+    <p>Para acessar a administração, faça login.</p>
+    <div class="button-group">
+      <a class="primary-button" href="/login">Ir para login</a>
+      <a class="secondary-button" href="/monitor">Autoatendimento</a>
+    </div>
   </main>
-
-  <script type="module" src="js/adminApp.js"></script>
 </body>
 </html>
