@@ -26,7 +26,12 @@ const getProductById = async (id) => {
 };
 
 const getProductByBarcode = async (barcode) => {
-  const product = await productsRepository.findByBarcode(barcode, true);
+  const normalizedBarcode = String(barcode || '').trim();
+  if (!normalizedBarcode) {
+    throw new HttpError(400, 'Código de barras é obrigatório para a consulta');
+  }
+
+  const product = await productsRepository.findByBarcode(normalizedBarcode, false);
   if (!product) {
     throw new HttpError(404, 'Produto não encontrado');
   }
@@ -34,32 +39,40 @@ const getProductByBarcode = async (barcode) => {
 };
 
 const createProduct = async (payload) => {
-  await validateCategory(payload.categoria_id);
+  const productData = {
+    ...payload,
+    nome: payload.nome?.trim(),
+    codigo_barras: payload.codigo_barras?.trim() || null
+  };
+  await validateCategory(productData.categoria_id);
 
-  if (!payload.nome || !payload.nome.trim()) {
+  if (!productData.nome) {
     throw new HttpError(400, 'Nome do produto é obrigatório');
   }
 
-  if (payload.preco_venda === undefined || Number(payload.preco_venda) < 0) {
+  if (productData.preco_venda === undefined || Number(productData.preco_venda) < 0) {
     throw new HttpError(400, 'Preço de venda deve ser informado e não pode ser negativo');
   }
 
-  if (payload.estoque_atual === undefined || Number(payload.estoque_atual) < 0) {
+  if (productData.estoque_atual === undefined || Number(productData.estoque_atual) < 0) {
     throw new HttpError(400, 'Estoque inicial deve ser informado e não pode ser negativo');
   }
 
-  if (payload.estoque_minimo === undefined || Number(payload.estoque_minimo) < 0) {
+  if (productData.estoque_minimo === undefined || Number(productData.estoque_minimo) < 0) {
     throw new HttpError(400, 'Estoque mínimo deve ser informado e não pode ser negativo');
   }
 
-  if (payload.codigo_barras) {
-    const existing = await productsRepository.findByBarcode(payload.codigo_barras, false);
+  if (productData.codigo_barras) {
+    const existing = await productsRepository.findByBarcode(productData.codigo_barras, false);
     if (existing) {
-      throw new HttpError(409, 'Código de barras já cadastrado');
+      throw new HttpError(
+        409,
+        `Este código de barras já está cadastrado para o produto ${existing.nome}.`
+      );
     }
   }
 
-  const productId = await productsRepository.createProduct(payload);
+  const productId = await productsRepository.createProduct(productData);
   return productsRepository.findById(productId);
 };
 
@@ -69,32 +82,41 @@ const updateProduct = async (id, payload) => {
     throw new HttpError(404, 'Produto não encontrado');
   }
 
-  await validateCategory(payload.categoria_id);
+  const productData = {
+    ...payload,
+    nome: payload.nome?.trim(),
+    codigo_barras: payload.codigo_barras?.trim() || null
+  };
 
-  if (!payload.nome || !payload.nome.trim()) {
+  await validateCategory(productData.categoria_id);
+
+  if (!productData.nome) {
     throw new HttpError(400, 'Nome do produto é obrigatório');
   }
 
-  if (payload.preco_venda === undefined || Number(payload.preco_venda) < 0) {
+  if (productData.preco_venda === undefined || Number(productData.preco_venda) < 0) {
     throw new HttpError(400, 'Preço de venda deve ser informado e não pode ser negativo');
   }
 
-  if (payload.estoque_atual === undefined || Number(payload.estoque_atual) < 0) {
+  if (productData.estoque_atual === undefined || Number(productData.estoque_atual) < 0) {
     throw new HttpError(400, 'Estoque inicial deve ser informado e não pode ser negativo');
   }
 
-  if (payload.estoque_minimo === undefined || Number(payload.estoque_minimo) < 0) {
+  if (productData.estoque_minimo === undefined || Number(productData.estoque_minimo) < 0) {
     throw new HttpError(400, 'Estoque mínimo deve ser informado e não pode ser negativo');
   }
 
-  if (payload.codigo_barras) {
-    const existing = await productsRepository.findByBarcodeExcludingId(payload.codigo_barras, id);
+  if (productData.codigo_barras) {
+    const existing = await productsRepository.findByBarcodeExcludingId(productData.codigo_barras, id);
     if (existing) {
-      throw new HttpError(409, 'Código de barras já cadastrado');
+      throw new HttpError(
+        409,
+        `Este código de barras já está cadastrado para o produto ${existing.nome}.`
+      );
     }
   }
 
-  await productsRepository.updateProduct(id, payload);
+  await productsRepository.updateProduct(id, productData);
   return productsRepository.findById(id);
 };
 

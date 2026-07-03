@@ -32,10 +32,15 @@
         <h1>Categorias</h1>
         <form id="categoryForm" class="admin-form">
           <label for="categoryName">Nome da categoria</label>
-          <input id="categoryName" type="text" required />
-          <button type="submit">Cadastrar categoria</button>
+          <input id="categoryName" name="nome" type="text" autocomplete="off" required />
+          <button id="categorySubmitButton" type="submit">Cadastrar categoria</button>
         </form>
-        <p id="categoryMessage" class="message"></p>
+        <p id="categoryMessage" class="message" aria-live="polite"></p>
+
+        <section class="card">
+          <h2>Categorias cadastradas</h2>
+          <div id="categoryList" class="table-container" aria-live="polite"></div>
+        </section>
       </section>
     </div>
   </div>

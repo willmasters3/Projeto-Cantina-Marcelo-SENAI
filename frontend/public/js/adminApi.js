@@ -9,11 +9,14 @@ const request = async (path, options = {}) => {
     ...options
   });
 
-  const data = await response.json().catch(() => null);
+  const data = response.status === 204 ? null : await response.json().catch(() => null);
   if (!response.ok) {
     if (response.status === 401) window.location.href = '/login';
     const message = data?.error || data?.message || 'Não foi possível concluir a operação';
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    error.data = data;
+    throw error;
   }
 
   return data.data || data;
@@ -36,9 +39,20 @@ const createProduct = async (payload) => request('/products', {
   body: JSON.stringify(payload)
 });
 
+const getProductByBarcode = async (barcode) => (
+  request(`/products/barcode/${encodeURIComponent(barcode)}`)
+);
+
+const updateProduct = async (id, payload) => request(`/products/${id}`, {
+  method: 'PUT',
+  body: JSON.stringify(payload)
+});
+
 export default {
   listCategories,
   createCategory,
   listProducts,
-  createProduct
+  createProduct,
+  getProductByBarcode,
+  updateProduct
 };

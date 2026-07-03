@@ -1,10 +1,20 @@
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import app from '../src/app.js';
 import authSessionsRepository from '../src/repositories/authSessionsRepository.js';
 import authService from '../src/services/authService.js';
+import categoriesService from '../src/services/categoriesService.js';
+import productsRepository from '../src/repositories/productsRepository.js';
+import productsService from '../src/services/productsService.js';
 import statusRepository from '../src/repositories/statusRepository.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const frontendPath = path.resolve(__dirname, '../../frontend/public');
 
 const adminUser = {
   id: 1,
@@ -19,6 +29,10 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
   const originalLogout = authService.logout;
   const originalStatusCheck = statusRepository.checkDatabaseConnection;
   const originalInvalidateSession = authSessionsRepository.invalidateSession;
+  const originalListCategories = categoriesService.listCategories;
+  const originalCreateCategory = categoriesService.createCategory;
+  const originalGetProductByBarcode = productsService.getProductByBarcode;
+  const originalFindProductByBarcode = productsRepository.findByBarcode;
   const server = app.listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));
   const { port } = server.address();
@@ -37,6 +51,11 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
       const loginResponse = await request('/login');
       assert.equal(loginResponse.status, 200);
       assert.match(await loginResponse.text(), /Acesso ao sistema/);
+      const contentSecurityPolicy = loginResponse.headers.get('content-security-policy');
+      assert.match(contentSecurityPolicy, /script-src 'self'/);
+      assert.match(contentSecurityPolicy, /script-src-attr 'none'/);
+      assert.doesNotMatch(contentSecurityPolicy, /script-src[^;]*'unsafe-inline'/);
+      assert.doesNotMatch(contentSecurityPolicy, /'unsafe-eval'/);
 
       const monitorResponse = await request('/monitor');
       assert.equal(monitorResponse.status, 200);
@@ -110,6 +129,84 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
       assert.match(logoutResponse.headers.get('set-cookie'), /cantina_session=;/);
     });
 
+    await t.test('processa categoria e consulta código de barras com sessão administrativa', async () => {
+      authService.getUserBySessionToken = async () => adminUser;
+      categoriesService.listCategories = async () => [
+        { id: 1, nome: 'Bebidas', ativo: 1 }
+      ];
+      categoriesService.createCategory = async ({ nome }) => ({ id: 2, nome, ativo: 1 });
+      productsService.getProductByBarcode = async (barcode) => ({
+        id: 9,
+        nome: 'Suco de laranja',
+        codigo_barras: barcode,
+        ativo: 1
+      });
+
+      const categoryResponse = await request('/api/v1/categories', {
+        method: 'POST',
+        headers: {
+          cookie: 'cantina_session=admin-session',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({ nome: 'Lanches' })
+      });
+      assert.equal(categoryResponse.status, 201);
+      assert.equal((await categoryResponse.json()).data.nome, 'Lanches');
+
+      const categoriesResponse = await request('/api/v1/categories', {
+        headers: { cookie: 'cantina_session=admin-session' }
+      });
+      assert.equal(categoriesResponse.status, 200);
+      assert.equal((await categoriesResponse.json()).data.length, 1);
+
+      const barcodeResponse = await request('/api/v1/products/barcode/7891234567890', {
+        headers: { cookie: 'cantina_session=admin-session' }
+      });
+      assert.equal(barcodeResponse.status, 200);
+      assert.equal((await barcodeResponse.json()).data.nome, 'Suco de laranja');
+    });
+
+    await t.test('mantém Categorias e Produtos livres de JavaScript inline', async () => {
+      const files = await Promise.all([
+        'app/categorias.html',
+        'app/produtos.html',
+        'js/categoriesApp.js',
+        'js/productsApp.js',
+        'js/appLayout.js'
+      ].map((file) => fs.readFile(path.join(frontendPath, file), 'utf8')));
+      const source = files.join('\n');
+      const productsScript = files[3];
+
+      assert.doesNotMatch(source, /\son[a-z]+\s*=/i);
+      assert.doesNotMatch(source, /\beval\s*\(/);
+      assert.doesNotMatch(source, /\bnew\s+Function\b/);
+      assert.doesNotMatch(source, /innerHTML/);
+      assert.match(productsScript, /barcodeInput\.addEventListener\('keydown'/);
+      assert.match(productsScript, /event\.preventDefault\(\)/);
+      assert.match(productsScript, /adminApi\.getProductByBarcode\(barcode\)/);
+    });
+
+    await t.test('bloqueia no backend o cadastro de código de barras duplicado', async () => {
+      productsRepository.findByBarcode = async () => ({
+        id: 4,
+        nome: 'Produto existente',
+        codigo_barras: '7891234567890'
+      });
+
+      await assert.rejects(
+        productsService.createProduct({
+          categoria_id: null,
+          codigo_barras: '7891234567890',
+          nome: 'Novo produto',
+          preco_venda: 5,
+          estoque_atual: 1,
+          estoque_minimo: 0,
+          ativo: true
+        }),
+        (error) => error.status === 409 && /Produto existente/.test(error.message)
+      );
+    });
+
     await t.test('usa a rota de status correta sem consultar o MySQL', async () => {
       statusRepository.checkDatabaseConnection = async () => true;
       const statusResponse = await request('/api/v1/status');
@@ -139,6 +236,10 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
     authService.logout = originalLogout;
     statusRepository.checkDatabaseConnection = originalStatusCheck;
     authSessionsRepository.invalidateSession = originalInvalidateSession;
+    categoriesService.listCategories = originalListCategories;
+    categoriesService.createCategory = originalCreateCategory;
+    productsService.getProductByBarcode = originalGetProductByBarcode;
+    productsRepository.findByBarcode = originalFindProductByBarcode;
     await new Promise((resolve, reject) => server.close((error) => (
       error ? reject(error) : resolve()
     )));

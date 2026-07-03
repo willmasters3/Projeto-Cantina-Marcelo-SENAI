@@ -100,6 +100,120 @@ textarea {
   color: #15803d;
 }
 
+.table-container {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+th {
+  color: #475569;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.status-badge {
+  display: inline-flex;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.status-badge.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.inactive {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.scanner-hint {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #93c5fd;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.scanner-hint span {
+  font-size: 0.92rem;
+}
+
+.admin-form h2 {
+  margin-bottom: 0.5rem;
+}
+
+.barcode-feedback {
+  margin: -0.4rem 0 0.5rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.barcode-feedback[hidden] {
+  display: none;
+}
+
+.barcode-feedback p {
+  margin-bottom: 0;
+}
+
+.barcode-feedback button {
+  margin-top: 0.75rem;
+}
+
+.barcode-feedback.checking,
+.barcode-feedback.available {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.barcode-feedback.duplicate,
+.barcode-feedback.error {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.secondary-action {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.secondary-action:hover {
+  background: #cbd5e1;
+}
+
+.product-edit-button {
+  margin-top: 0.75rem;
+  padding: 0.65rem 1rem;
+}
+
 #productList {
   margin-top: 1rem;
 }

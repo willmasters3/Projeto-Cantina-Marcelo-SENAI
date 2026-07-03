@@ -6,6 +6,23 @@ const productSearchForm = document.getElementById('productSearchForm');
 const productSearchInput = document.getElementById('productSearch');
 const productList = document.getElementById('productList');
 const categorySelect = document.getElementById('productCategory');
+const barcodeInput = document.getElementById('productBarcode');
+const productNameInput = document.getElementById('productName');
+const productDescriptionInput = document.getElementById('productDescription');
+const productPriceInput = document.getElementById('productPrice');
+const productCostInput = document.getElementById('productCost');
+const productStockInput = document.getElementById('productStock');
+const productMinStockInput = document.getElementById('productMinStock');
+const barcodeFeedback = document.getElementById('barcodeFeedback');
+const barcodeFeedbackMessage = document.getElementById('barcodeFeedbackMessage');
+const openExistingProductButton = document.getElementById('openExistingProductButton');
+const productSubmitButton = document.getElementById('productSubmitButton');
+const cancelProductEditButton = document.getElementById('cancelProductEditButton');
+const productFormTitle = document.getElementById('productFormTitle');
+
+let duplicateProduct = null;
+let editingProductId = null;
+let editingProductActive = true;
 
 const showMessage = (element, message, isError = false) => {
   element.textContent = message;
@@ -44,22 +61,122 @@ const renderProducts = (products) => {
       line.append(labelElement, document.createTextNode(value));
       item.appendChild(line);
     });
+
+    const editButton = document.createElement('button');
+    editButton.type = 'button';
+    editButton.className = 'secondary-action product-edit-button';
+    editButton.textContent = 'Editar produto';
+    editButton.addEventListener('click', () => openProductEditor(product));
+    item.appendChild(editButton);
     productList.appendChild(item);
   });
+};
+
+const hideBarcodeFeedback = () => {
+  barcodeFeedback.hidden = true;
+  barcodeFeedback.className = 'barcode-feedback';
+  barcodeFeedbackMessage.textContent = '';
+  openExistingProductButton.hidden = true;
+};
+
+const showBarcodeFeedback = (message, type, product = null) => {
+  barcodeFeedback.hidden = false;
+  barcodeFeedback.className = `barcode-feedback ${type}`;
+  barcodeFeedbackMessage.textContent = message;
+  duplicateProduct = product;
+  openExistingProductButton.hidden = !product;
+};
+
+const resetProductForm = () => {
+  productForm.reset();
+  duplicateProduct = null;
+  editingProductId = null;
+  editingProductActive = true;
+  productFormTitle.textContent = 'Cadastrar produto';
+  productSubmitButton.textContent = 'Cadastrar produto';
+  cancelProductEditButton.hidden = true;
+  hideBarcodeFeedback();
+  barcodeInput.focus();
+};
+
+const openProductEditor = (product) => {
+  editingProductId = product.id;
+  editingProductActive = Boolean(product.ativo);
+  duplicateProduct = null;
+  barcodeInput.value = product.codigo_barras || '';
+  productNameInput.value = product.nome || '';
+  categorySelect.value = product.categoria_id ? String(product.categoria_id) : '';
+  productDescriptionInput.value = product.descricao || '';
+  productPriceInput.value = product.preco_venda ?? '';
+  productCostInput.value = product.custo ?? '';
+  productStockInput.value = product.estoque_atual ?? '';
+  productMinStockInput.value = product.estoque_minimo ?? 0;
+  productFormTitle.textContent = `Editar produto: ${product.nome}`;
+  productSubmitButton.textContent = 'Salvar alterações';
+  cancelProductEditButton.hidden = false;
+  hideBarcodeFeedback();
+  showMessage(productMessage, `Editando o produto ${product.nome}.`);
+  productNameInput.focus();
+  productForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 const loadCategories = async () => {
   try {
     const categories = await adminApi.listCategories();
-    categorySelect.innerHTML = '<option value="">Sem categoria</option>';
+    categorySelect.replaceChildren();
+    const emptyOption = document.createElement('option');
+    emptyOption.value = '';
+    emptyOption.textContent = 'Sem categoria';
+    categorySelect.appendChild(emptyOption);
     categories.forEach((category) => {
       const option = document.createElement('option');
       option.value = category.id;
-      option.textContent = category.nome;
+      option.textContent = category.ativo ? category.nome : `${category.nome} (inativa)`;
       categorySelect.appendChild(option);
     });
   } catch (error) {
     showMessage(productMessage, 'Erro ao carregar categorias: ' + error.message, true);
+  }
+};
+
+const checkBarcode = async ({ focusName = true } = {}) => {
+  const barcode = barcodeInput.value.trim();
+
+  if (!barcode) {
+    duplicateProduct = null;
+    hideBarcodeFeedback();
+    if (focusName) productNameInput.focus();
+    return 'empty';
+  }
+
+  showBarcodeFeedback('Consultando código de barras...', 'checking');
+
+  try {
+    const product = await adminApi.getProductByBarcode(barcode);
+    if (editingProductId === product.id) {
+      duplicateProduct = null;
+      showBarcodeFeedback('Este é o código do produto que está sendo editado.', 'available');
+      if (focusName) productNameInput.focus();
+      return 'available';
+    }
+
+    showBarcodeFeedback(
+      `Este código de barras já está cadastrado para o produto ${product.nome}.`,
+      'duplicate',
+      product
+    );
+    return 'duplicate';
+  } catch (error) {
+    if (error.status === 404) {
+      duplicateProduct = null;
+      showBarcodeFeedback('Código disponível para um novo produto.', 'available');
+      if (focusName) productNameInput.focus();
+      return 'available';
+    }
+
+    duplicateProduct = null;
+    showBarcodeFeedback(`Não foi possível consultar o código: ${error.message}`, 'error');
+    return 'error';
   }
 };
 
@@ -74,26 +191,70 @@ const loadProducts = async (search = '') => {
 
 productForm.addEventListener('submit', async (event) => {
   event.preventDefault();
+  productSubmitButton.disabled = true;
   try {
+    const barcodeStatus = await checkBarcode({ focusName: false });
+    if (barcodeStatus === 'duplicate') {
+      showMessage(
+        productMessage,
+        'Cadastro bloqueado: abra o produto existente ou informe outro código de barras.',
+        true
+      );
+      return;
+    }
+    if (barcodeStatus === 'error') return;
+
     const productData = {
       categoria_id: categorySelect.value ? Number(categorySelect.value) : null,
-      codigo_barras: document.getElementById('productBarcode').value || null,
-      nome: document.getElementById('productName').value,
-      descricao: document.getElementById('productDescription').value || null,
-      preco_venda: Number(document.getElementById('productPrice').value),
-      custo: document.getElementById('productCost').value ? Number(document.getElementById('productCost').value) : null,
-      estoque_atual: Number(document.getElementById('productStock').value),
-      estoque_minimo: Number(document.getElementById('productMinStock').value),
-      ativo: true
+      codigo_barras: barcodeInput.value.trim() || null,
+      nome: productNameInput.value.trim(),
+      descricao: productDescriptionInput.value.trim() || null,
+      preco_venda: Number(productPriceInput.value),
+      custo: productCostInput.value ? Number(productCostInput.value) : null,
+      estoque_atual: Number(productStockInput.value),
+      estoque_minimo: Number(productMinStockInput.value),
+      ativo: editingProductId ? editingProductActive : true
     };
 
-    await adminApi.createProduct(productData);
-    showMessage(productMessage, 'Produto cadastrado com sucesso');
-    productForm.reset();
+    if (editingProductId) {
+      await adminApi.updateProduct(editingProductId, productData);
+      resetProductForm();
+      showMessage(productMessage, 'Produto atualizado com sucesso.');
+    } else {
+      await adminApi.createProduct(productData);
+      resetProductForm();
+      showMessage(productMessage, 'Produto cadastrado com sucesso.');
+    }
     await loadProducts();
   } catch (error) {
     showMessage(productMessage, error.message, true);
+    if (error.status === 409 && barcodeInput.value.trim()) {
+      await checkBarcode({ focusName: false });
+    }
+  } finally {
+    productSubmitButton.disabled = false;
   }
+});
+
+barcodeInput.addEventListener('keydown', async (event) => {
+  if (event.key !== 'Enter') return;
+  event.preventDefault();
+  event.stopPropagation();
+  await checkBarcode();
+});
+
+barcodeInput.addEventListener('input', () => {
+  duplicateProduct = null;
+  hideBarcodeFeedback();
+});
+
+openExistingProductButton.addEventListener('click', () => {
+  if (duplicateProduct) openProductEditor(duplicateProduct);
+});
+
+cancelProductEditButton.addEventListener('click', () => {
+  resetProductForm();
+  showMessage(productMessage, 'Edição cancelada.');
 });
 
 productSearchForm.addEventListener('submit', async (event) => {
@@ -102,6 +263,8 @@ productSearchForm.addEventListener('submit', async (event) => {
 });
 
 window.addEventListener('DOMContentLoaded', async () => {
+  barcodeInput.focus();
   await loadCategories();
   await loadProducts();
+  barcodeInput.focus();
 });

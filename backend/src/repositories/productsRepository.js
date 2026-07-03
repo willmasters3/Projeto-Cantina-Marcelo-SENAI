@@ -102,7 +102,7 @@ const findByBarcode = async (barcode, activeOnly = true) => {
 
 const findByBarcodeExcludingId = async (codigoBarras, id) => {
   const [rows] = await pool.query(
-    'SELECT id FROM products WHERE codigo_barras = ? AND id != ?',
+    'SELECT id, nome FROM products WHERE codigo_barras = ? AND id != ?',
     [codigoBarras, id]
   );
   return rows[0] || null;

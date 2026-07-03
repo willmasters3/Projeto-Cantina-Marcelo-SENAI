@@ -7,7 +7,7 @@ const parseBoolean = (value) => {
   return null;
 };
 
-const validateProductPayload = (req) => {
+const validateProductPayload = (req, res, next) => {
   const {
     categoria_id,
     codigo_barras,
@@ -46,13 +46,15 @@ const validateProductPayload = (req) => {
   if (ativo !== undefined && parsedAtivo === null) {
     throw new HttpError(400, 'Campo ativo deve ser booleano');
   }
+  return next();
 };
 
-const validateProductStatus = (req) => {
+const validateProductStatus = (req, res, next) => {
   const parsedAtivo = parseBoolean(req.body.ativo);
   if (parsedAtivo === null) {
     throw new HttpError(400, 'Campo ativo deve ser booleano');
   }
+  return next();
 };
 
 export { validateProductPayload, validateProductStatus };

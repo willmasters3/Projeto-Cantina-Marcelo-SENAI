@@ -6,12 +6,13 @@ const listCategories = async ({ search }) => {
 };
 
 const createCategory = async ({ nome }) => {
-  const existing = await categoriesRepository.findByNameActive(nome);
+  const normalizedName = nome.trim();
+  const existing = await categoriesRepository.findByName(normalizedName);
   if (existing) {
-    throw new HttpError(409, 'Já existe uma categoria ativa com esse nome');
+    throw new HttpError(409, `A categoria "${existing.nome}" já está cadastrada`);
   }
 
-  const categoryId = await categoriesRepository.createCategory(nome);
+  const categoryId = await categoriesRepository.createCategory(normalizedName);
   return categoriesRepository.findById(categoryId);
 };
 

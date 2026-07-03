@@ -30,12 +30,33 @@
 
       <section class="page-content" id="productAdminPage">
         <h1>Produtos</h1>
+
+        <div class="scanner-hint" role="note">
+          <strong>Bipe o código de barras ou preencha manualmente.</strong>
+          <span>O leitor USB funciona como teclado e pode enviar Enter após a leitura.</span>
+        </div>
+
         <form id="productForm" class="admin-form">
-          <label for="productName">Nome</label>
-          <input id="productName" type="text" required />
+          <h2 id="productFormTitle">Cadastrar produto</h2>
 
           <label for="productBarcode">Código de barras</label>
-          <input id="productBarcode" type="text" placeholder="Opcional" />
+          <input
+            id="productBarcode"
+            name="codigo_barras"
+            type="text"
+            placeholder="Opcional"
+            autocomplete="off"
+          />
+
+          <div id="barcodeFeedback" class="barcode-feedback" role="status" aria-live="polite" hidden>
+            <p id="barcodeFeedbackMessage"></p>
+            <button id="openExistingProductButton" type="button" hidden>
+              Abrir produto existente
+            </button>
+          </div>
+
+          <label for="productName">Nome</label>
+          <input id="productName" name="nome" type="text" autocomplete="off" required />
 
           <label for="productCategory">Categoria</label>
           <select id="productCategory"></select>
@@ -55,10 +76,15 @@
           <label for="productMinStock">Estoque mínimo</label>
           <input id="productMinStock" type="number" step="0.01" min="0" value="0" required />
 
-          <button type="submit">Cadastrar produto</button>
+          <div class="form-actions">
+            <button id="productSubmitButton" type="submit">Cadastrar produto</button>
+            <button id="cancelProductEditButton" class="secondary-action" type="button" hidden>
+              Cancelar edição
+            </button>
+          </div>
         </form>
 
-        <p id="productMessage" class="message"></p>
+        <p id="productMessage" class="message" aria-live="polite"></p>
 
         <section class="card">
           <h2>Pesquisar produtos</h2>
