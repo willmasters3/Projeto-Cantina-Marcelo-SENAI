@@ -46,15 +46,67 @@ button:hover {
   background: #1d4ed8;
 }
 
-.status-card {
-  margin-top: 2rem;
-  padding: 1.5rem;
+.card {
+  margin-top: 1.75rem;
+  padding: 1.75rem;
+  background: #ffffff;
   border: 1px solid #d1d5db;
-  border-radius: 12px;
-  background: #f8fafc;
+  border-radius: 16px;
   text-align: left;
 }
 
-.hidden {
-  display: none;
+.card h2 {
+  margin-bottom: 1rem;
 }
+
+label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #1f2937;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.message {
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+.message.error {
+  color: #b91c1c;
+}
+
+.message.success {
+  color: #15803d;
+}
+
+#productList {
+  margin-top: 1rem;
+}
+
+.product-card {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.product-card h3 {
+  margin-bottom: 0.5rem;
+}
+

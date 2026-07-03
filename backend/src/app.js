@@ -6,6 +6,8 @@ import cors from 'cors';
 import morgan from 'morgan';
 import env from './config/env.js';
 import statusRoutes from './routes/statusRoutes.js';
+import categoriesRoutes from './routes/categoriesRoutes.js';
+import productsRoutes from './routes/productsRoutes.js';
 import notFoundMiddleware from './middlewares/notFoundMiddleware.js';
 import errorHandlerMiddleware from './middlewares/errorHandlerMiddleware.js';
 
@@ -30,7 +32,9 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
-app.use('/api/v1', statusRoutes);
+app.use('/api/v1/status', statusRoutes);
+app.use('/api/v1/categories', categoriesRoutes);
+app.use('/api/v1/products', productsRoutes);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
