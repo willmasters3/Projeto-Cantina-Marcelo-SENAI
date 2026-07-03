@@ -64,11 +64,42 @@
           <label for="productDescription">Descrição</label>
           <textarea id="productDescription" rows="3" placeholder="Opcional"></textarea>
 
-          <label for="productPrice">Preço de venda</label>
-          <input id="productPrice" type="number" step="0.01" min="0" required />
+          <div class="form-field">
+            <label for="productPrice">Preço de venda</label>
+            <p id="productPriceHelp" class="field-help">Valor cobrado do cliente.</p>
+            <div class="currency-input">
+              <span class="currency-prefix" aria-hidden="true">R$</span>
+              <input
+                id="productPrice"
+                name="preco_venda"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                aria-describedby="productPriceHelp"
+                placeholder="0,00"
+                required
+              />
+            </div>
+          </div>
 
-          <label for="productCost">Custo</label>
-          <input id="productCost" type="number" step="0.01" min="0" />
+          <div class="form-field">
+            <label for="productCost">Custo</label>
+            <p id="productCostHelp" class="field-help">
+              Quanto a cantina pagou pelo produto. Opcional, usado para lucro e relatórios futuros.
+            </p>
+            <div class="currency-input">
+              <span class="currency-prefix" aria-hidden="true">R$</span>
+              <input
+                id="productCost"
+                name="custo"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                aria-describedby="productCostHelp"
+                placeholder="0,00"
+              />
+            </div>
+          </div>
 
           <label for="productStock">Estoque inicial</label>
           <input id="productStock" type="number" step="0.01" min="0" required />

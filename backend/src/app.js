@@ -17,6 +17,22 @@ import errorHandlerMiddleware from './middlewares/errorHandlerMiddleware.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const frontendPath = path.resolve(__dirname, '../../frontend/public');
+const loggedApiMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+const shouldSkipRequestLog = (req, res) => {
+  const requestPath = req.path || '';
+  const isStaticRequest = requestPath.startsWith('/css/')
+    || requestPath.startsWith('/js/')
+    || requestPath.startsWith('/assets/')
+    || requestPath === '/favicon.ico';
+
+  if (isStaticRequest || res.statusCode === 304) return true;
+  if (res.statusCode >= 400) return false;
+
+  const isLoggedApiMutation = requestPath.startsWith('/api/')
+    && loggedApiMethods.has(req.method);
+  return !isLoggedApiMutation;
+};
 
 const app = express();
 
@@ -30,7 +46,7 @@ app.use(
     credentials: true
   })
 );
-app.use(morgan('dev'));
+app.use(morgan('dev', { skip: shouldSkipRequestLog }));
 
 app.use('/css', express.static(path.join(frontendPath, 'css'), { index: false }));
 app.use('/js', express.static(path.join(frontendPath, 'js'), { index: false }));
@@ -45,3 +61,4 @@ app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
 
 export default app;
+export { shouldSkipRequestLog };

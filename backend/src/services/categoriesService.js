@@ -17,17 +17,18 @@ const createCategory = async ({ nome }) => {
 };
 
 const updateCategory = async (id, { nome }) => {
+  const normalizedName = nome.trim();
   const current = await categoriesRepository.findById(id);
   if (!current) {
     throw new HttpError(404, 'Categoria não encontrada');
   }
 
-  const existing = await categoriesRepository.findByNameActiveExcludingId(nome, id);
+  const existing = await categoriesRepository.findByNameExcludingId(normalizedName, id);
   if (existing) {
-    throw new HttpError(409, 'Já existe outra categoria ativa com esse nome');
+    throw new HttpError(409, `A categoria "${existing.nome}" já está cadastrada`);
   }
 
-  await categoriesRepository.updateCategory(id, nome);
+  await categoriesRepository.updateCategory(id, normalizedName);
   return categoriesRepository.findById(id);
 };
 

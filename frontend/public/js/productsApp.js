@@ -1,4 +1,10 @@
 import adminApi from './adminApi.js';
+import {
+  bindCurrencyInput,
+  formatBRLCurrency,
+  formattedCurrencyToDecimal,
+  setCurrencyInputDecimalValue
+} from './currencyInput.js';
 
 const productForm = document.getElementById('productForm');
 const productMessage = document.getElementById('productMessage');
@@ -23,6 +29,9 @@ const productFormTitle = document.getElementById('productFormTitle');
 let duplicateProduct = null;
 let editingProductId = null;
 let editingProductActive = true;
+
+bindCurrencyInput(productPriceInput);
+bindCurrencyInput(productCostInput);
 
 const showMessage = (element, message, isError = false) => {
   element.textContent = message;
@@ -49,7 +58,7 @@ const renderProducts = (products) => {
     const details = [
       ['Código de barras', product.codigo_barras || 'Não informado'],
       ['Categoria', product.categoria || 'Sem categoria'],
-      ['Preço', `R$ ${Number(product.preco_venda).toFixed(2)}`],
+      ['Preço', formatBRLCurrency(product.preco_venda)],
       ['Estoque', Number(product.estoque_atual).toFixed(2)],
       ['Status', product.ativo ? 'Ativo' : 'Inativo']
     ];
@@ -89,6 +98,8 @@ const showBarcodeFeedback = (message, type, product = null) => {
 
 const resetProductForm = () => {
   productForm.reset();
+  setCurrencyInputDecimalValue(productPriceInput, null);
+  setCurrencyInputDecimalValue(productCostInput, null);
   duplicateProduct = null;
   editingProductId = null;
   editingProductActive = true;
@@ -107,8 +118,8 @@ const openProductEditor = (product) => {
   productNameInput.value = product.nome || '';
   categorySelect.value = product.categoria_id ? String(product.categoria_id) : '';
   productDescriptionInput.value = product.descricao || '';
-  productPriceInput.value = product.preco_venda ?? '';
-  productCostInput.value = product.custo ?? '';
+  setCurrencyInputDecimalValue(productPriceInput, product.preco_venda);
+  setCurrencyInputDecimalValue(productCostInput, product.custo);
   productStockInput.value = product.estoque_atual ?? '';
   productMinStockInput.value = product.estoque_minimo ?? 0;
   productFormTitle.textContent = `Editar produto: ${product.nome}`;
@@ -204,13 +215,21 @@ productForm.addEventListener('submit', async (event) => {
     }
     if (barcodeStatus === 'error') return;
 
+    const priceDecimal = formattedCurrencyToDecimal(productPriceInput.value);
+    const costDecimal = formattedCurrencyToDecimal(productCostInput.value);
+    if (priceDecimal === null) {
+      showMessage(productMessage, 'Preço de venda é obrigatório.', true);
+      productPriceInput.focus();
+      return;
+    }
+
     const productData = {
       categoria_id: categorySelect.value ? Number(categorySelect.value) : null,
       codigo_barras: barcodeInput.value.trim() || null,
       nome: productNameInput.value.trim(),
       descricao: productDescriptionInput.value.trim() || null,
-      preco_venda: Number(productPriceInput.value),
-      custo: productCostInput.value ? Number(productCostInput.value) : null,
+      preco_venda: Number(priceDecimal),
+      custo: costDecimal === null ? null : Number(costDecimal),
       estoque_atual: Number(productStockInput.value),
       estoque_minimo: Number(productMinStockInput.value),
       ativo: editingProductId ? editingProductActive : true

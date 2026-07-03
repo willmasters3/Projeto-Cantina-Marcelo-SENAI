@@ -31,25 +31,24 @@ const findById = async (id) => {
   return rows[0] || null;
 };
 
-const findByNameActive = async (nome) => {
-  const [rows] = await pool.query(
-    'SELECT id FROM categories WHERE nome_normalized = LOWER(TRIM(?)) AND ativo = 1',
-    [nome]
-  );
-  return rows[0] || null;
-};
-
 const findByName = async (nome) => {
   const [rows] = await pool.query(
-    'SELECT id, nome, ativo FROM categories WHERE nome_normalized = LOWER(TRIM(?)) LIMIT 1',
+    `SELECT id, nome, ativo
+     FROM categories
+     WHERE LOWER(TRIM(nome)) = LOWER(TRIM(?))
+     LIMIT 1`,
     [nome]
   );
   return rows[0] || null;
 };
 
-const findByNameActiveExcludingId = async (nome, id) => {
+const findByNameExcludingId = async (nome, id) => {
   const [rows] = await pool.query(
-    'SELECT id FROM categories WHERE nome_normalized = LOWER(TRIM(?)) AND ativo = 1 AND id != ?',
+    `SELECT id, nome, ativo
+     FROM categories
+     WHERE LOWER(TRIM(nome)) = LOWER(TRIM(?))
+       AND id != ?
+     LIMIT 1`,
     [nome, id]
   );
   return rows[0] || null;
@@ -72,8 +71,7 @@ export default {
   findAll,
   findById,
   findByName,
-  findByNameActive,
-  findByNameActiveExcludingId,
+  findByNameExcludingId,
   createCategory,
   updateCategory,
   updateStatus
