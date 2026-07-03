@@ -49,6 +49,20 @@
             </div>
 
             <div class="form-field">
+              <label for="clientCpf">CPF</label>
+              <input
+                id="clientCpf"
+                name="cpf"
+                type="text"
+                inputmode="numeric"
+                maxlength="14"
+                autocomplete="off"
+                placeholder="000.000.000-00"
+                required
+              />
+            </div>
+
+            <div class="form-field">
               <label for="clientRegistration">Matrícula</label>
               <input
                 id="clientRegistration"
@@ -113,7 +127,7 @@
               id="clientSearch"
               type="search"
               autocomplete="off"
-              placeholder="Nome, matrícula, telefone ou código"
+              placeholder="Nome, CPF, matrícula, telefone ou código"
             />
             <button type="submit">Buscar</button>
           </form>

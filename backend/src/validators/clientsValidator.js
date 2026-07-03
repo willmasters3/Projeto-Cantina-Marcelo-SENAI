@@ -1,4 +1,5 @@
 import HttpError from '../utils/httpError.js';
+import { isValidCpf, normalizeCpf } from '../utils/cpf.js';
 
 const validateOptionalText = (value, fieldName, maxLength) => {
   if (value === undefined || value === null || value === '') return;
@@ -11,13 +12,20 @@ const validateOptionalText = (value, fieldName, maxLength) => {
 };
 
 const validateClientPayload = (req, res, next) => {
-  const { nome, matricula, telefone, email, observacoes } = req.body;
+  const { nome, cpf, matricula, telefone, email, observacoes } = req.body;
 
   if (typeof nome !== 'string' || !nome.trim()) {
     throw new HttpError(400, 'Nome completo é obrigatório');
   }
   if (nome.trim().length > 150) {
     throw new HttpError(400, 'Nome completo deve ter no máximo 150 caracteres');
+  }
+
+  if (typeof cpf !== 'string' || !cpf.trim()) {
+    throw new HttpError(400, 'CPF é obrigatório');
+  }
+  if (normalizeCpf(cpf).length !== 11 || !isValidCpf(cpf)) {
+    throw new HttpError(400, 'Informe um CPF válido');
   }
 
   validateOptionalText(matricula, 'Matrícula', 50);

@@ -3,6 +3,7 @@ import { pool } from '../config/database.js';
 const clientFields = `
   id,
   nome,
+  cpf,
   matricula,
   telefone,
   email,
@@ -19,12 +20,16 @@ const findAll = async ({ search = '' } = {}) => {
 
   if (normalizedSearch) {
     const term = `%${normalizedSearch}%`;
+    const cpfDigits = normalizedSearch.replace(/\D/g, '');
+    const isCpfLikeSearch = cpfDigits && /^[\d.\-\s]+$/.test(normalizedSearch);
+    const cpfTerm = `%${isCpfLikeSearch ? cpfDigits : normalizedSearch}%`;
     query += `
       WHERE nome LIKE ?
+         OR cpf LIKE ?
          OR matricula LIKE ?
          OR telefone LIKE ?
          OR codigo LIKE ?`;
-    params.push(term, term, term, term);
+    params.push(term, cpfTerm, term, term, term);
   }
 
   query += ' ORDER BY ativo DESC, nome ASC';
@@ -47,6 +52,29 @@ const findByMatricula = async (matricula) => {
      WHERE LOWER(TRIM(matricula)) = LOWER(TRIM(?))
      LIMIT 1`,
     [matricula]
+  );
+  return rows[0] || null;
+};
+
+const findByCpf = async (cpf) => {
+  const [rows] = await pool.query(
+    `SELECT id, nome, cpf
+     FROM clients
+     WHERE cpf = ?
+     LIMIT 1`,
+    [cpf]
+  );
+  return rows[0] || null;
+};
+
+const findByCpfExcludingId = async (cpf, id) => {
+  const [rows] = await pool.query(
+    `SELECT id, nome, cpf
+     FROM clients
+     WHERE cpf = ?
+       AND id != ?
+     LIMIT 1`,
+    [cpf, id]
   );
   return rows[0] || null;
 };
@@ -75,10 +103,11 @@ const getNextCodeNumber = async () => {
 const createClient = async (client) => {
   const [result] = await pool.query(
     `INSERT INTO clients
-      (nome, matricula, telefone, email, codigo, ativo, observacoes)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      (nome, cpf, matricula, telefone, email, codigo, ativo, observacoes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       client.nome,
+      client.cpf,
       client.matricula,
       client.telefone,
       client.email,
@@ -94,13 +123,22 @@ const updateClient = async (id, client) => {
   await pool.query(
     `UPDATE clients SET
        nome = ?,
+       cpf = ?,
        matricula = ?,
        telefone = ?,
        email = ?,
        observacoes = ?,
        atualizado_em = CURRENT_TIMESTAMP
      WHERE id = ?`,
-    [client.nome, client.matricula, client.telefone, client.email, client.observacoes, id]
+    [
+      client.nome,
+      client.cpf,
+      client.matricula,
+      client.telefone,
+      client.email,
+      client.observacoes,
+      id
+    ]
   );
 };
 
@@ -116,6 +154,8 @@ const updateStatus = async (id, ativo) => {
 export default {
   findAll,
   findById,
+  findByCpf,
+  findByCpfExcludingId,
   findByMatricula,
   findByMatriculaExcludingId,
   getNextCodeNumber,

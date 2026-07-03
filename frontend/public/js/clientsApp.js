@@ -1,8 +1,10 @@
 import clientsApi from './clientsApi.js';
+import { bindCpfInput, formatCpf, maskCpfForList, onlyCpfDigits } from './cpfInput.js';
 
 const clientForm = document.getElementById('clientForm');
 const clientFormTitle = document.getElementById('clientFormTitle');
 const clientNameInput = document.getElementById('clientName');
+const clientCpfInput = document.getElementById('clientCpf');
 const clientRegistrationInput = document.getElementById('clientRegistration');
 const clientPhoneInput = document.getElementById('clientPhone');
 const clientEmailInput = document.getElementById('clientEmail');
@@ -41,6 +43,7 @@ const resetClientForm = () => {
 const openClientEditor = (client) => {
   editingClientId = client.id;
   clientNameInput.value = client.nome || '';
+  clientCpfInput.value = formatCpf(client.cpf);
   clientRegistrationInput.value = client.matricula || '';
   clientPhoneInput.value = client.telefone || '';
   clientEmailInput.value = client.email || '';
@@ -77,7 +80,7 @@ const renderClients = (clients) => {
   const table = document.createElement('table');
   const tableHead = document.createElement('thead');
   const headerRow = document.createElement('tr');
-  ['Código', 'Nome', 'Matrícula', 'Contato', 'Status', 'Ações'].forEach((title) => {
+  ['Código', 'Nome', 'CPF', 'Matrícula', 'Contato', 'Status', 'Ações'].forEach((title) => {
     const header = document.createElement('th');
     header.scope = 'col';
     header.textContent = title;
@@ -118,6 +121,7 @@ const renderClients = (clients) => {
     row.append(
       createCell(client.codigo),
       createCell(client.nome),
+      createCell(maskCpfForList(client.cpf)),
       createCell(client.matricula),
       createCell(contact),
       statusCell,
@@ -150,6 +154,7 @@ clientForm.addEventListener('submit', async (event) => {
 
   const payload = {
     nome: clientNameInput.value.trim(),
+    cpf: onlyCpfDigits(clientCpfInput.value),
     matricula: clientRegistrationInput.value.trim() || null,
     telefone: clientPhoneInput.value.trim() || null,
     email: clientEmailInput.value.trim() || null,
@@ -193,3 +198,5 @@ window.addEventListener('DOMContentLoaded', async () => {
   clientNameInput.focus();
   await loadClients();
 });
+
+bindCpfInput(clientCpfInput);

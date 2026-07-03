@@ -11,6 +11,7 @@ import categoriesRepository from '../src/repositories/categoriesRepository.js';
 import categoriesService from '../src/services/categoriesService.js';
 import clientsRepository from '../src/repositories/clientsRepository.js';
 import clientsService from '../src/services/clientsService.js';
+import { isValidCpf, normalizeCpf } from '../src/utils/cpf.js';
 import productsRepository from '../src/repositories/productsRepository.js';
 import productsService from '../src/services/productsService.js';
 import statusRepository from '../src/repositories/statusRepository.js';
@@ -45,7 +46,10 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
   const originalUpdateClient = clientsService.updateClient;
   const originalUpdateClientStatus = clientsService.updateClientStatus;
   const originalFindClientById = clientsRepository.findById;
+  const originalFindClientByCpf = clientsRepository.findByCpf;
+  const originalFindClientByCpfExcludingId = clientsRepository.findByCpfExcludingId;
   const originalFindClientByMatricula = clientsRepository.findByMatricula;
+  const originalFindClientByMatriculaExcludingId = clientsRepository.findByMatriculaExcludingId;
   const originalGetNextClientCodeNumber = clientsRepository.getNextCodeNumber;
   const originalCreateClientRecord = clientsRepository.createClient;
   const server = app.listen(0, '127.0.0.1');
@@ -370,6 +374,7 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
       const client = {
         id: 1,
         nome: 'Maria da Silva',
+        cpf: '52998224725',
         matricula: '2026001',
         telefone: '11999999999',
         email: 'maria@example.test',
@@ -390,7 +395,11 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
           cookie: 'cantina_session=admin-session',
           'content-type': 'application/json'
         },
-        body: JSON.stringify({ nome: 'Maria da Silva', matricula: '2026001' })
+        body: JSON.stringify({
+          nome: 'Maria da Silva',
+          cpf: '529.982.247-25',
+          matricula: '2026001'
+        })
       });
       assert.equal(createResponse.status, 201);
       assert.equal((await createResponse.json()).data.codigo, 'CLI-000001');
@@ -401,7 +410,7 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
           cookie: 'cantina_session=admin-session',
           'content-type': 'application/json'
         },
-        body: JSON.stringify({ nome: 'Maria Souza', matricula: '2026001' })
+        body: JSON.stringify({ nome: 'Maria Souza', cpf: '52998224725', matricula: '2026001' })
       });
       assert.equal(updateResponse.status, 200);
 
@@ -441,9 +450,42 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
       assert.equal(deniedResponse.status, 403);
     });
 
-    await t.test('gera código sequencial e bloqueia matrícula duplicada', async () => {
+    await t.test('valida, normaliza e protege CPF no módulo de Clientes', async () => {
+      assert.equal(normalizeCpf('529.982.247-25'), '52998224725');
+      assert.equal(isValidCpf('529.982.247-25'), true);
+      assert.equal(isValidCpf('000.000.000-00'), false);
+      assert.equal(isValidCpf('529.982.247-24'), false);
+      assert.equal(isValidCpf('529982247250'), false);
+      assert.equal(isValidCpf('529abc98224725'), false);
+
+      authService.getUserBySessionToken = async () => adminUser;
+      const invalidCpfResponse = await request('/api/v1/clients', {
+        method: 'POST',
+        headers: {
+          cookie: 'cantina_session=admin-session',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({ nome: 'CPF inválido', cpf: '000.000.000-00' })
+      });
+      assert.equal(invalidCpfResponse.status, 400);
+      assert.match((await invalidCpfResponse.json()).error, /CPF válido/);
+
+      const missingCpfOnUpdateResponse = await request('/api/v1/clients/1', {
+        method: 'PUT',
+        headers: {
+          cookie: 'cantina_session=admin-session',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({ nome: 'Edição sem CPF', matricula: null })
+      });
+      assert.equal(missingCpfOnUpdateResponse.status, 400);
+      assert.equal((await missingCpfOnUpdateResponse.json()).error, 'CPF é obrigatório');
+    });
+
+    await t.test('gera código e trata CPF ou matrícula duplicados sem erro 500', async () => {
       clientsService.createClient = originalCreateClient;
       let insertedClient;
+      clientsRepository.findByCpf = async () => null;
       clientsRepository.findByMatricula = async () => null;
       clientsRepository.getNextCodeNumber = async () => 1;
       clientsRepository.createClient = async (client) => {
@@ -454,6 +496,7 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
 
       const created = await clientsService.createClient({
         nome: '  João Pereira  ',
+        cpf: '529.982.247-25',
         matricula: '',
         telefone: '',
         email: ' JOAO@EXAMPLE.TEST ',
@@ -461,6 +504,7 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
       });
       assert.equal(created.codigo, 'CLI-000001');
       assert.equal(created.nome, 'João Pereira');
+      assert.equal(created.cpf, '52998224725');
       assert.equal(created.matricula, null);
       assert.equal(created.email, 'joao@example.test');
 
@@ -472,6 +516,7 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
       await assert.rejects(
         clientsService.createClient({
           nome: 'Outro cliente',
+          cpf: '11144477735',
           matricula: ' MAT-1 ',
           telefone: null,
           email: null,
@@ -480,8 +525,27 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
         (error) => error.status === 409 && /Cliente existente/.test(error.message)
       );
 
+      clientsRepository.findByCpf = async () => ({
+        id: 4,
+        nome: 'Dona do CPF',
+        cpf: '52998224725'
+      });
+      clientsRepository.findByMatricula = async () => null;
+      await assert.rejects(
+        clientsService.createClient({
+          nome: 'CPF repetido',
+          cpf: '529.982.247-25',
+          matricula: null,
+          telefone: null,
+          email: null,
+          observacoes: null
+        }),
+        (error) => error.status === 409 && /CPF informado/.test(error.message)
+      );
+
       const generatedNumbers = [1, 2];
       let creationAttempts = 0;
+      clientsRepository.findByCpf = async () => null;
       clientsRepository.findByMatricula = async () => null;
       clientsRepository.getNextCodeNumber = async () => generatedNumbers.shift();
       clientsRepository.createClient = async (client) => {
@@ -497,6 +561,7 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
 
       const retriedClient = await clientsService.createClient({
         nome: 'Código em concorrência',
+        cpf: '11144477735',
         matricula: null,
         telefone: null,
         email: null,
@@ -504,22 +569,117 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
       });
       assert.equal(creationAttempts, 2);
       assert.equal(retriedClient.codigo, 'CLI-000002');
+
+      clientsRepository.findByCpf = async () => null;
+      clientsRepository.findByMatricula = async () => null;
+      clientsRepository.getNextCodeNumber = async () => 3;
+      clientsRepository.createClient = async () => {
+        const collision = new Error('Matrícula duplicada durante a gravação');
+        collision.code = 'ER_DUP_ENTRY';
+        clientsRepository.findByMatricula = async () => ({
+          id: 9,
+          nome: 'Matrícula concorrente',
+          matricula: 'MAT-RACE'
+        });
+        throw collision;
+      };
+      await assert.rejects(
+        clientsService.createClient({
+          nome: 'Concorrência de matrícula',
+          cpf: '93541134780',
+          matricula: 'MAT-RACE',
+          telefone: null,
+          email: null,
+          observacoes: null
+        }),
+        (error) => error.status === 409 && /Matrícula concorrente/.test(error.message)
+      );
+    });
+
+    await t.test('exclui o próprio cliente e trata conflitos de CPF ou matrícula na edição', async () => {
+      clientsService.updateClient = originalUpdateClient;
+      clientsRepository.findById = async () => ({
+        id: 5,
+        nome: 'Cliente editado',
+        cpf: '52998224725',
+        matricula: 'MAT-5'
+      });
+      clientsRepository.findByCpfExcludingId = async (cpf, id) => {
+        assert.equal(cpf, '52998224725');
+        assert.equal(id, '5');
+        return { id: 6, nome: 'Dona do CPF', cpf };
+      };
+      clientsRepository.findByMatriculaExcludingId = async () => null;
+
+      await assert.rejects(
+        clientsService.updateClient('5', {
+          nome: 'Cliente editado',
+          cpf: '529.982.247-25',
+          matricula: 'MAT-5',
+          telefone: null,
+          email: null,
+          observacoes: null
+        }),
+        (error) => error.status === 409 && /Dona do CPF/.test(error.message)
+      );
+
+      clientsRepository.findByCpfExcludingId = async () => null;
+      clientsRepository.findByMatriculaExcludingId = async () => ({
+        id: 7,
+        nome: 'Dona da matrícula',
+        matricula: 'MAT-5'
+      });
+      await assert.rejects(
+        clientsService.updateClient('5', {
+          nome: 'Cliente editado',
+          cpf: '52998224725',
+          matricula: 'MAT-5',
+          telefone: null,
+          email: null,
+          observacoes: null
+        }),
+        (error) => error.status === 409 && /Dona da matrícula/.test(error.message)
+      );
+    });
+
+    await t.test('mascara CPF na lista e pesquisa CPF somente na área protegida', async () => {
+      const cpfModuleSource = await fs.readFile(
+        path.join(frontendPath, 'js/cpfInput.js'),
+        'utf8'
+      );
+      const cpfModuleUrl = `data:text/javascript;base64,${Buffer
+        .from(cpfModuleSource)
+        .toString('base64')}`;
+      const { formatCpf, maskCpfForList, onlyCpfDigits } = await import(cpfModuleUrl);
+
+      assert.equal(formatCpf('52998224725'), '529.982.247-25');
+      assert.equal(onlyCpfDigits('529.982.247-25'), '52998224725');
+      assert.equal(maskCpfForList('52998224725'), '***.***.***-25');
+
+      const repositorySource = await fs.readFile(
+        path.resolve(__dirname, '../src/repositories/clientsRepository.js'),
+        'utf8'
+      );
+      assert.match(repositorySource, /OR cpf LIKE \?/);
     });
 
     await t.test('mantém Clientes livre de JavaScript inline e sem exposição pública', async () => {
       const files = await Promise.all([
         'app/clientes.html',
         'js/clientsApi.js',
-        'js/clientsApp.js'
+        'js/clientsApp.js',
+        'js/cpfInput.js'
       ].map((file) => fs.readFile(path.join(frontendPath, file), 'utf8')));
       const source = files.join('\n');
 
-      assert.doesNotMatch(source, /\son[a-z]+\s*=/i);
+      assert.doesNotMatch(files[0], /\son[a-z]+\s*=/i);
       assert.doesNotMatch(source, /\beval\s*\(/);
       assert.doesNotMatch(source, /\bnew\s+Function\b/);
       assert.doesNotMatch(source, /innerHTML/);
       assert.match(files[0], /Observações internas/);
+      assert.match(files[0], /placeholder="000\.000\.000-00"/);
       assert.match(files[0], /clientsApp\.js/);
+      assert.match(files[2], /maskCpfForList\(client\.cpf\)/);
 
       authService.getUserBySessionToken = async () => null;
       const publicResponse = await request('/api/v1/clients');
@@ -568,7 +728,10 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
     clientsService.updateClient = originalUpdateClient;
     clientsService.updateClientStatus = originalUpdateClientStatus;
     clientsRepository.findById = originalFindClientById;
+    clientsRepository.findByCpf = originalFindClientByCpf;
+    clientsRepository.findByCpfExcludingId = originalFindClientByCpfExcludingId;
     clientsRepository.findByMatricula = originalFindClientByMatricula;
+    clientsRepository.findByMatriculaExcludingId = originalFindClientByMatriculaExcludingId;
     clientsRepository.getNextCodeNumber = originalGetNextClientCodeNumber;
     clientsRepository.createClient = originalCreateClientRecord;
     await new Promise((resolve, reject) => server.close((error) => (
