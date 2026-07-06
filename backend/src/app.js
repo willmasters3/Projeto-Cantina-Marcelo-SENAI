@@ -22,6 +22,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const frontendPath = path.resolve(__dirname, '../../frontend/public');
 const loggedApiMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const helmetOptions = env.nodeEnv === 'production'
+  ? {}
+  : {
+      contentSecurityPolicy: {
+        directives: {
+          'upgrade-insecure-requests': null
+        }
+      },
+      crossOriginOpenerPolicy: false,
+      originAgentCluster: false,
+      strictTransportSecurity: false
+    };
 
 const shouldSkipRequestLog = (req, res) => {
   const requestPath = req.path || '';
@@ -41,7 +53,7 @@ const shouldSkipRequestLog = (req, res) => {
 
 const app = express();
 
-app.use(helmet());
+app.use(helmet(helmetOptions));
 app.use(express.json());
 app.use(cookieMiddleware);
 app.use(
