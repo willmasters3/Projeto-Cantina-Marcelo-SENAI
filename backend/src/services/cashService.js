@@ -106,27 +106,39 @@ const closeSession = async (payload, user) => {
   const differenceReason = normalizeOptionalText(payload.justificativa_diferenca);
   const notes = normalizeOptionalText(payload.observacoes);
 
-  return cashRepository.withTransaction(async (connection) => {
-    const session = await cashRepository.findOpenSession(terminalCode, connection, true);
-    if (!session) throw new HttpError(409, 'Não existe caixa aberto para fechamento');
+  try {
+    return await cashRepository.withTransaction(async (connection) => {
+      const session = await cashRepository.findOpenSession(terminalCode, connection, true);
+      if (!session) throw new HttpError(409, 'Não existe caixa aberto para fechamento');
 
-    const expectedValue = await cashRepository.calculateExpectedCash(session.id, connection);
-    const expectedAmount = parseFixedDecimal(expectedValue);
-    const difference = informedAmount - expectedAmount;
-    if (difference !== 0n && !differenceReason) {
-      throw new HttpError(400, 'Informe uma justificativa para a diferença de caixa');
+      const expectedValue = await cashRepository.calculateExpectedCash(session.id, connection);
+      const expectedAmount = parseFixedDecimal(expectedValue);
+      const difference = informedAmount - expectedAmount;
+      if (difference !== 0n && !differenceReason) {
+        throw new HttpError(400, 'Informe uma justificativa para a diferença de caixa');
+      }
+
+      const affectedRows = await cashRepository.closeSession(session.id, {
+        userId: user.id,
+        expectedAmount: formatFixedDecimal(expectedAmount),
+        informedAmount: formatFixedDecimal(informedAmount),
+        differenceReason,
+        notes
+      }, connection);
+      if (!affectedRows) throw new HttpError(409, 'O caixa já foi fechado');
+      return cashRepository.findSessionById(session.id, connection);
+    });
+  } catch (error) {
+    const isUnsignedDifferenceError = error?.code === 'ER_DATA_OUT_OF_RANGE'
+      && /valor_fechamento_informado.*valor_fechamento_esperado/.test(String(error.message));
+    if (isUnsignedDifferenceError) {
+      throw new HttpError(
+        409,
+        'Não foi possível registrar a diferença negativa. A estrutura do caixa precisa ser corrigida pelo administrador.'
+      );
     }
-
-    const affectedRows = await cashRepository.closeSession(session.id, {
-      userId: user.id,
-      expectedAmount: formatFixedDecimal(expectedAmount),
-      informedAmount: formatFixedDecimal(informedAmount),
-      differenceReason,
-      notes
-    }, connection);
-    if (!affectedRows) throw new HttpError(409, 'O caixa já foi fechado');
-    return cashRepository.findSessionById(session.id, connection);
-  });
+    throw error;
+  }
 };
 
 const getProductByBarcode = async (barcode) => {

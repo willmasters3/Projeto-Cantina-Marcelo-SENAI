@@ -46,7 +46,8 @@ let editingProductId = null;
 let editingProductActive = true;
 let currentProductImageUrl = null;
 let selectedProductImage = null;
-let previewObjectUrl = null;
+let selectedPreviewDataUrl = null;
+let previewReadSequence = 0;
 
 bindCurrencyInput(productPriceInput);
 bindCurrencyInput(productCostInput);
@@ -120,15 +121,24 @@ const showImageFeedback = (message = '', isError = false) => {
     : 'image-feedback';
 };
 
-const revokePreviewObjectUrl = () => {
-  if (!previewObjectUrl) return;
-  URL.revokeObjectURL(previewObjectUrl);
-  previewObjectUrl = null;
-};
-
 const setProductImagePreview = (url = null) => {
   productImagePreview.src = url || productPlaceholderUrl;
 };
+
+const readImageAsDataUrl = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.addEventListener('load', () => {
+    if (typeof reader.result !== 'string' || !reader.result.startsWith('data:image/')) {
+      reject(new Error('O arquivo selecionado não gerou uma imagem válida.'));
+      return;
+    }
+    resolve(reader.result);
+  }, { once: true });
+  reader.addEventListener('error', () => {
+    reject(new Error('Não foi possível ler a imagem selecionada.'));
+  }, { once: true });
+  reader.readAsDataURL(file);
+});
 
 const validateSelectedImage = (file) => {
   if (!allowedImageTypes.has(file.type)) {
@@ -145,7 +155,8 @@ const validateSelectedImage = (file) => {
 };
 
 const clearSelectedImage = () => {
-  revokePreviewObjectUrl();
+  previewReadSequence += 1;
+  selectedPreviewDataUrl = null;
   selectedProductImage = null;
   productImageInput.value = '';
 };
@@ -429,7 +440,7 @@ chooseProductImageButton.addEventListener('click', () => {
   productImageInput.click();
 });
 
-productImageInput.addEventListener('change', () => {
+productImageInput.addEventListener('change', async () => {
   const file = productImageInput.files?.[0];
   if (!file) return;
 
@@ -441,24 +452,37 @@ productImageInput.addEventListener('change', () => {
     return;
   }
 
-  revokePreviewObjectUrl();
+  const readSequence = ++previewReadSequence;
   selectedProductImage = file;
-  previewObjectUrl = URL.createObjectURL(file);
-  setProductImagePreview(previewObjectUrl);
   chooseProductImageButton.textContent = currentProductImageUrl
     ? 'Trocar imagem selecionada'
     : 'Alterar imagem selecionada';
-  showImageFeedback('Prévia carregada. A imagem será enviada ao salvar o produto.');
+  showImageFeedback('Carregando prévia...');
+
+  try {
+    const dataUrl = await readImageAsDataUrl(file);
+    if (readSequence !== previewReadSequence || selectedProductImage !== file) return;
+    selectedPreviewDataUrl = dataUrl;
+    setProductImagePreview(dataUrl);
+    showImageFeedback('Prévia carregada. A imagem será enviada ao salvar o produto.');
+  } catch (error) {
+    if (readSequence !== previewReadSequence || selectedProductImage !== file) return;
+    clearSelectedImage();
+    setProductImagePreview(currentProductImageUrl);
+    showImageFeedback(error.message || 'Não foi possível visualizar esta imagem.', true);
+  }
 });
 
 productImagePreview.addEventListener('error', () => {
-  const failedSelectedPreview = Boolean(previewObjectUrl);
+  const failedSelectedPreview = Boolean(selectedPreviewDataUrl);
   if (failedSelectedPreview) {
     clearSelectedImage();
     showImageFeedback('Não foi possível visualizar esta imagem.', true);
+    setProductImagePreview(currentProductImageUrl);
+    return;
   }
   if (!productImagePreview.src.endsWith(productPlaceholderUrl)) {
-    setProductImagePreview(failedSelectedPreview ? currentProductImageUrl : null);
+    setProductImagePreview();
   }
 });
 

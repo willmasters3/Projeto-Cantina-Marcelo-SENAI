@@ -367,6 +367,20 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
       assert.doesNotMatch(cssSources.join('\n'), /!important/i);
     });
 
+    await t.test('avisa antes do logout quando existe caixa aberto', async () => {
+      const [layoutSource, modalStyles] = await Promise.all([
+        fs.readFile(path.join(frontendPath, 'js/appLayout.js'), 'utf8'),
+        fs.readFile(path.join(frontendPath, 'css/components/modal.css'), 'utf8')
+      ]);
+      assert.match(layoutSource, /cashApi\.getCurrentSession\(\)/);
+      assert.match(layoutSource, /logoutConfirmation\.dialog\.showModal\(\)/);
+      assert.match(layoutSource, /Sair do sistema não fecha o caixa/);
+      assert.match(layoutSource, /Sair mesmo assim/);
+      assert.doesNotMatch(layoutSource, /\b(?:alert|confirm)\s*\(/);
+      assert.match(modalStyles, /\.logout-confirmation-modal::backdrop/);
+      assert.doesNotMatch(modalStyles, /!important/i);
+    });
+
     await t.test('formata preço e custo em centavos sem alterar a API', async () => {
       const currencyModuleSource = await fs.readFile(
         path.join(frontendPath, 'js/currencyInput.js'),
@@ -692,6 +706,9 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
       assert.match(files[1], /uploadProductImage\(savedProduct\.id, imageToUpload\)/);
       assert.match(files[1], /mas a imagem falhou/);
       assert.match(files[1], /removeProductImage\(editingProductId\)/);
+      assert.match(files[1], /new FileReader\(\)/);
+      assert.match(files[1], /reader\.readAsDataURL\(file\)/);
+      assert.doesNotMatch(files[1], /createObjectURL|revokeObjectURL/);
       assert.match(files[2], /product\.imagem_url \|\| productPlaceholderUrl/);
       assert.match(files[2], /item\.imageUrl \|\| productPlaceholderUrl/);
       assert.match(files[3], /pi\.caminho_publico AS imagem_url/);
@@ -1261,6 +1278,58 @@ test('fluxo funcional e transacional do Caixa sem acessar o banco', async (t) =>
         (error) => error.status === 400 && /justificativa/.test(error.message)
       );
       assert.equal(closeWasCalled, false);
+    });
+
+    await t.test('permite encaminhar diferença negativa para o fechamento', async () => {
+      useFakeTransaction();
+      let receivedClosing;
+      cashRepository.findOpenSession = async () => ({ id: 4, status: 'ABERTA' });
+      cashRepository.calculateExpectedCash = async () => '10.0000';
+      cashRepository.closeSession = async (_id, closing) => {
+        receivedClosing = closing;
+        return 1;
+      };
+      cashRepository.findSessionById = async () => ({
+        id: 4,
+        status: 'FECHADA',
+        diferenca_fechamento: '-8.0000'
+      });
+
+      const session = await cashService.closeSession({
+        valor_fechamento_informado: '2.00',
+        justificativa_diferenca: 'Dinheiro contado abaixo do esperado'
+      }, user);
+
+      assert.equal(receivedClosing.expectedAmount, '10.0000');
+      assert.equal(receivedClosing.informedAmount, '2.0000');
+      assert.equal(session.diferenca_fechamento, '-8.0000');
+    });
+
+    await t.test('trata estrutura antiga e fornece correção SQL assinada', async () => {
+      const databaseError = new Error(
+        'DECIMAL UNSIGNED value is out of range in \'(`valor_fechamento_informado` - `valor_fechamento_esperado`)\''
+      );
+      databaseError.code = 'ER_DATA_OUT_OF_RANGE';
+      cashRepository.withTransaction = async () => {
+        throw databaseError;
+      };
+
+      await assert.rejects(
+        cashService.closeSession({
+          valor_fechamento_informado: '2.00',
+          justificativa_diferenca: 'Teste'
+        }, user),
+        (error) => error.status === 409 && /estrutura do caixa/.test(error.message)
+      );
+
+      const migration = await fs.readFile(
+        path.resolve(__dirname, '../../database/scripts/006_fix_cash_session_negative_difference.sql'),
+        'utf8'
+      );
+      assert.match(migration, /MODIFY COLUMN diferenca_fechamento DECIMAL\(15,4\)/);
+      assert.match(migration, /CAST\(valor_fechamento_informado AS DECIMAL\(15,4\)\)/);
+      assert.match(migration, /CAST\(valor_fechamento_esperado AS DECIMAL\(15,4\)\)/);
+      assert.doesNotMatch(migration, /FLOAT|DOUBLE/i);
     });
 
     await t.test('cancela venda criando estorno e entrada de estoque', async () => {

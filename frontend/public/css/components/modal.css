@@ -1,1 +1,77 @@
-/* Shared modal styles will live here when the first modal is introduced. */
+.logout-confirmation-modal {
+  width: min(calc(100% - 2rem), 470px);
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+}
+
+.logout-confirmation-modal::backdrop {
+  background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(2px);
+}
+
+.logout-confirmation-content {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-6);
+}
+
+.logout-confirmation-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.logout-confirmation-heading h2,
+.logout-confirmation-heading p,
+.logout-confirmation-message {
+  margin: 0;
+}
+
+.logout-confirmation-heading h2 {
+  color: var(--color-text-strong);
+  font-size: 1.2rem;
+}
+
+.logout-confirmation-heading p {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.logout-confirmation-icon {
+  display: grid;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.logout-confirmation-message {
+  color: var(--color-text-subtle);
+  line-height: 1.55;
+}
+
+.logout-confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+@media (max-width: 520px) {
+  .logout-confirmation-actions {
+    display: grid;
+  }
+
+  .logout-confirmation-actions button {
+    width: 100%;
+  }
+}
