@@ -231,6 +231,59 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
       assert.match(repositorySource, /AND id != \?/);
     });
 
+    await t.test('edita categoria sem perder o vínculo dos produtos', async () => {
+      const originalFindByIdForEdit = categoriesRepository.findById;
+      const originalFindByNameExcludingId = categoriesRepository.findByNameExcludingId;
+      const originalUpdateCategoryRecord = categoriesRepository.updateCategory;
+      let persistedName = 'Bebidas';
+      let updatedCategoryId;
+
+      try {
+        categoriesRepository.findById = async (id) => ({
+          id,
+          nome: persistedName,
+          ativo: 1
+        });
+        categoriesRepository.findByNameExcludingId = async (nome, id) => {
+          assert.equal(nome, 'Doces');
+          assert.equal(id, '7');
+          return null;
+        };
+        categoriesRepository.updateCategory = async (id, nome) => {
+          updatedCategoryId = id;
+          persistedName = nome;
+        };
+
+        const updated = await categoriesService.updateCategory('7', { nome: '  Doces  ' });
+        assert.equal(updatedCategoryId, '7');
+        assert.equal(updated.nome, 'Doces');
+
+        categoriesRepository.findByNameExcludingId = async () => ({
+          id: 8,
+          nome: 'Balas',
+          ativo: 1
+        });
+        await assert.rejects(
+          categoriesService.updateCategory('7', { nome: 'Balas' }),
+          (error) => error.status === 409 && /Balas/.test(error.message)
+        );
+
+        const [categoriesHtml, categoriesScript, adminApiSource] = await Promise.all([
+          fs.readFile(path.join(frontendPath, 'app/categorias.html'), 'utf8'),
+          fs.readFile(path.join(frontendPath, 'js/categoriesApp.js'), 'utf8'),
+          fs.readFile(path.join(frontendPath, 'js/adminApi.js'), 'utf8')
+        ]);
+        assert.match(categoriesHtml, /id="cancelCategoryEditButton"/);
+        assert.match(categoriesScript, /adminApi\.updateCategory\(editingCategoryId/);
+        assert.match(categoriesScript, /Salvar alterações/);
+        assert.match(adminApiSource, /method: 'PUT'/);
+      } finally {
+        categoriesRepository.findById = originalFindByIdForEdit;
+        categoriesRepository.findByNameExcludingId = originalFindByNameExcludingId;
+        categoriesRepository.updateCategory = originalUpdateCategoryRecord;
+      }
+    });
+
     await t.test('filtra logs estáticos e 304, mantendo mutações e erros', () => {
       const shouldSkip = (method, requestPath, statusCode) => shouldSkipRequestLog(
         { method, path: requestPath },

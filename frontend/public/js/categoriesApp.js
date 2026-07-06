@@ -5,10 +5,33 @@ const categoryNameInput = document.getElementById('categoryName');
 const categoryMessage = document.getElementById('categoryMessage');
 const categoryList = document.getElementById('categoryList');
 const categorySubmitButton = document.getElementById('categorySubmitButton');
+const categoryFormTitle = document.getElementById('categoryFormTitle');
+const cancelCategoryEditButton = document.getElementById('cancelCategoryEditButton');
+
+let editingCategoryId = null;
 
 const showMessage = (element, message, isError = false) => {
   element.textContent = message;
   element.className = isError ? 'message error' : 'message success';
+};
+
+const resetCategoryForm = () => {
+  editingCategoryId = null;
+  categoryForm.reset();
+  categoryFormTitle.textContent = 'Cadastrar categoria';
+  categorySubmitButton.textContent = 'Cadastrar categoria';
+  cancelCategoryEditButton.hidden = true;
+};
+
+const openCategoryEditor = (category) => {
+  editingCategoryId = category.id;
+  categoryNameInput.value = category.nome;
+  categoryFormTitle.textContent = `Editar categoria: ${category.nome}`;
+  categorySubmitButton.textContent = 'Salvar alterações';
+  cancelCategoryEditButton.hidden = false;
+  categoryNameInput.focus();
+  categoryNameInput.select();
+  categoryForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 const renderCategories = (categories) => {
@@ -24,7 +47,7 @@ const renderCategories = (categories) => {
   const table = document.createElement('table');
   const tableHead = document.createElement('thead');
   const headerRow = document.createElement('tr');
-  ['Nome', 'Status'].forEach((title) => {
+  ['Nome', 'Status', 'Ações'].forEach((title) => {
     const header = document.createElement('th');
     header.scope = 'col';
     header.textContent = title;
@@ -38,12 +61,20 @@ const renderCategories = (categories) => {
     const nameCell = document.createElement('td');
     const statusCell = document.createElement('td');
     const statusBadge = document.createElement('span');
+    const actionsCell = document.createElement('td');
+    const editButton = document.createElement('button');
 
     nameCell.textContent = category.nome;
     statusBadge.className = category.ativo ? 'status-badge active' : 'status-badge inactive';
     statusBadge.textContent = category.ativo ? 'Ativa' : 'Inativa';
     statusCell.appendChild(statusBadge);
-    row.append(nameCell, statusCell);
+    actionsCell.className = 'table-actions';
+    editButton.type = 'button';
+    editButton.className = 'secondary-action compact-button';
+    editButton.textContent = 'Editar';
+    editButton.addEventListener('click', () => openCategoryEditor(category));
+    actionsCell.appendChild(editButton);
+    row.append(nameCell, statusCell, actionsCell);
     tableBody.appendChild(row);
   });
 
@@ -64,20 +95,37 @@ const loadCategories = async () => {
 categoryForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   categorySubmitButton.disabled = true;
+  cancelCategoryEditButton.disabled = true;
+  const categoryName = categoryNameInput.value.trim();
+  const isEditing = editingCategoryId !== null;
   try {
-    await adminApi.createCategory({ nome: categoryNameInput.value.trim() });
-    showMessage(categoryMessage, 'Categoria cadastrada com sucesso.');
-    categoryNameInput.value = '';
+    if (isEditing) {
+      await adminApi.updateCategory(editingCategoryId, { nome: categoryName });
+    } else {
+      await adminApi.createCategory({ nome: categoryName });
+    }
+    showMessage(
+      categoryMessage,
+      isEditing ? 'Categoria atualizada com sucesso.' : 'Categoria cadastrada com sucesso.'
+    );
+    resetCategoryForm();
     await loadCategories();
     categoryNameInput.focus();
   } catch (error) {
     const message = error.status === 409
       ? error.message
-      : `Não foi possível cadastrar a categoria: ${error.message}`;
+      : `Não foi possível ${isEditing ? 'atualizar' : 'cadastrar'} a categoria: ${error.message}`;
     showMessage(categoryMessage, message, true);
   } finally {
     categorySubmitButton.disabled = false;
+    cancelCategoryEditButton.disabled = false;
   }
+});
+
+cancelCategoryEditButton.addEventListener('click', () => {
+  resetCategoryForm();
+  showMessage(categoryMessage, 'Edição cancelada.');
+  categoryNameInput.focus();
 });
 
 window.addEventListener('DOMContentLoaded', async () => {

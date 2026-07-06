@@ -27,6 +27,10 @@ const createCategory = async (payload) => request('/categories', {
   method: 'POST',
   body: JSON.stringify(payload)
 });
+const updateCategory = async (id, payload) => request(`/categories/${id}`, {
+  method: 'PUT',
+  body: JSON.stringify(payload)
+});
 
 const listProducts = async (search) => {
   const params = new URLSearchParams();
@@ -64,6 +68,7 @@ const removeProductImage = async (id) => request(`/products/${id}/image`, {
 export default {
   listCategories,
   createCategory,
+  updateCategory,
   listProducts,
   removeProductImage,
   createProduct,

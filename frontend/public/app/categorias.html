@@ -32,9 +32,15 @@
       <section class="page-content">
         <h1>Categorias</h1>
         <form id="categoryForm" class="admin-form">
+          <h2 id="categoryFormTitle">Cadastrar categoria</h2>
           <label for="categoryName">Nome da categoria</label>
           <input id="categoryName" name="nome" type="text" autocomplete="off" required />
-          <button id="categorySubmitButton" type="submit">Cadastrar categoria</button>
+          <div class="form-actions">
+            <button id="categorySubmitButton" type="submit">Cadastrar categoria</button>
+            <button id="cancelCategoryEditButton" class="secondary-action" type="button" hidden>
+              Cancelar edição
+            </button>
+          </div>
         </form>
         <p id="categoryMessage" class="message" aria-live="polite"></p>
 
