@@ -453,6 +453,28 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
       assert.match(productsHtml, /Quanto a cantina pagou pelo produto\./);
     });
 
+    await t.test('exibe quantidades inteiras sem casas decimais', async () => {
+      const quantityModuleSource = await fs.readFile(
+        path.join(frontendPath, 'js/quantityFormat.js'),
+        'utf8'
+      );
+      const quantityModuleUrl = `data:text/javascript;base64,${Buffer
+        .from(quantityModuleSource)
+        .toString('base64')}`;
+      const { formatQuantity } = await import(quantityModuleUrl);
+      const [productsScript, cashScript] = await Promise.all([
+        fs.readFile(path.join(frontendPath, 'js/productsApp.js'), 'utf8'),
+        fs.readFile(path.join(frontendPath, 'js/cashApp.js'), 'utf8')
+      ]);
+
+      assert.equal(formatQuantity('14.00'), '14');
+      assert.equal(formatQuantity('13.0000'), '13');
+      assert.equal(formatQuantity('1000.0000'), '1.000');
+      assert.equal(formatQuantity('1.5000'), '1,5');
+      assert.match(productsScript, /formatQuantity\(product\.estoque_atual\)/);
+      assert.match(cashScript, /Estoque: \$\{formatQuantity\(product\.estoque_atual\)\}/);
+    });
+
     await t.test('bloqueia no backend o cadastro de código de barras duplicado', async () => {
       productsRepository.findByBarcode = async () => ({
         id: 4,
@@ -1118,6 +1140,28 @@ test('fluxo funcional e transacional do Caixa sem acessar o banco', async (t) =>
         formatFixedDecimal(parseFixedDecimal('20.00') - parseFixedDecimal('13.50')),
         '6.5000'
       );
+    });
+
+    await t.test('carrega produtos rápidos mesmo com busca vazia', async () => {
+      let receivedSearch;
+      cashRepository.searchProducts = async (search) => {
+        receivedSearch = search;
+        return [{
+          id: 8,
+          nome: 'Halls Preto',
+          preco_venda: '4.0000',
+          estoque_atual: '20.0000',
+          ativo: 1,
+          imagem_url: '/media/products/product-8-test.webp'
+        }];
+      };
+
+      const products = await cashService.searchProducts('   ');
+
+      assert.equal(receivedSearch, '');
+      assert.equal(products.length, 1);
+      assert.equal(products[0].nome, 'Halls Preto');
+      assert.equal(products[0].imagem_url, '/media/products/product-8-test.webp');
     });
 
     await t.test('confirma venda à vista usando preço e estoque travados no servidor', async () => {

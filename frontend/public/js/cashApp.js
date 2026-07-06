@@ -2,6 +2,7 @@ import authApi from './authApi.js';
 import cashApi from './cashApi.js';
 import { bindCurrencyInput, formattedCurrencyToDecimal } from './currencyInput.js';
 import { decimalToUnits, factor, formatBRL, multiplyMoney, unitsToDecimal } from './fixedMoney.js';
+import { formatQuantity } from './quantityFormat.js';
 
 const cashMessage = document.getElementById('cashMessage');
 const cashSessionBadge = document.getElementById('cashSessionBadge');
@@ -334,7 +335,7 @@ const renderProductResults = (products) => {
     const name = document.createElement('strong');
     name.textContent = product.nome;
     const meta = document.createElement('span');
-    meta.textContent = `${formatBRL(product.preco_venda)} · Estoque ${product.estoque_atual}`;
+    meta.textContent = `${formatBRL(product.preco_venda)} · Estoque ${formatQuantity(product.estoque_atual)}`;
     details.append(name, meta);
     const addButton = document.createElement('button');
     addButton.type = 'button';
@@ -373,7 +374,7 @@ const renderQuickProducts = (products) => {
     price.className = 'quick-product-price';
     price.textContent = formatBRL(product.preco_venda);
     const stock = document.createElement('small');
-    stock.textContent = `Estoque: ${product.estoque_atual}`;
+    stock.textContent = `Estoque: ${formatQuantity(product.estoque_atual)}`;
     button.append(visual, name, price, stock);
     button.addEventListener('click', () => addProductToCart(product));
     quickProducts.appendChild(button);

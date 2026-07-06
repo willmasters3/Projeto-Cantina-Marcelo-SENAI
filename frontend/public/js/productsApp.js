@@ -5,6 +5,7 @@ import {
   formattedCurrencyToDecimal,
   setCurrencyInputDecimalValue
 } from './currencyInput.js';
+import { formatQuantity } from './quantityFormat.js';
 
 const productForm = document.getElementById('productForm');
 const productMessage = document.getElementById('productMessage');
@@ -91,7 +92,7 @@ const renderProducts = (products) => {
       ['Código de barras', product.codigo_barras || 'Não informado'],
       ['Categoria', product.categoria || 'Sem categoria'],
       ['Preço', formatBRLCurrency(product.preco_venda)],
-      ['Estoque', Number(product.estoque_atual).toFixed(2)],
+      ['Estoque', formatQuantity(product.estoque_atual)],
       ['Status', product.ativo ? 'Ativo' : 'Inativo']
     ];
 

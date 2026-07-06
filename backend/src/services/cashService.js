@@ -151,7 +151,6 @@ const getProductByBarcode = async (barcode) => {
 
 const searchProducts = async (search) => {
   const normalized = String(search ?? '').trim();
-  if (!normalized) return [];
   return cashRepository.searchProducts(normalized);
 };
 
