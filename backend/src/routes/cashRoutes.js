@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import authConfig from '../config/auth.js';
 import cashController from '../controllers/cashController.js';
+import monitorController from '../controllers/monitorController.js';
 import { requireAuth, requireRole } from '../middlewares/authMiddleware.js';
 import {
   validateCancellation,
@@ -17,6 +18,7 @@ router.use(requireAuth, requireRole(cashRoles));
 router.get('/session', cashController.getCurrentSession);
 router.post('/session/open', validateOpenSession, cashController.openSession);
 router.post('/session/close', validateCloseSession, cashController.closeSession);
+router.put('/monitor-state', monitorController.updateState);
 
 router.get('/products', cashController.searchProducts);
 router.get('/products/barcode/:barcode', cashController.getProductByBarcode);

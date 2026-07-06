@@ -95,7 +95,7 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
 
       const monitorResponse = await request('/monitor');
       assert.equal(monitorResponse.status, 200);
-      assert.match(await monitorResponse.text(), /Autoatendimento da Cantina/);
+      assert.match(await monitorResponse.text(), /Consulta de conta/);
     });
 
     await t.test('bloqueia páginas, APIs e arquivos HTML internos sem sessão', async () => {

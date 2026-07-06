@@ -74,6 +74,7 @@ let selectedClient = null;
 let selectedSaleForCancellation = null;
 let miscellaneousSequence = 0;
 let cart = [];
+let monitorPublishQueue = Promise.resolve();
 
 bindCurrencyInput(openingAmount);
 bindCurrencyInput(closingAmount);
@@ -102,6 +103,27 @@ const getCartTotal = () => cart.reduce(
   (total, item) => total + multiplyMoney(item.unitPrice, item.quantity),
   0n
 );
+
+const publishMonitorState = (status, sourceItems = cart) => {
+  const payload = {
+    terminal: 'CAIXA-01',
+    status,
+    itens: sourceItems.map((item) => ({
+      descricao: item.name,
+      quantidade: String(item.quantity),
+      preco_unitario: item.unitPrice
+    }))
+  };
+
+  monitorPublishQueue = monitorPublishQueue
+    .catch(() => null)
+    .then(() => cashApi.updateMonitorState(payload))
+    .catch(() => null);
+};
+
+const syncCartWithMonitor = () => {
+  publishMonitorState(cart.length ? 'SALE_ACTIVE' : 'IDLE');
+};
 
 const getCashReceivedUnits = () => {
   const decimalValue = formattedCurrencyToDecimal(cashReceived.value);
@@ -193,12 +215,14 @@ const updateItemQuantity = (itemId, quantity) => {
   }
   item.quantity = quantity;
   renderCart();
+  syncCartWithMonitor();
 };
 
 const removeCartItem = (itemId) => {
   cart = cart.filter((item) => item.id !== itemId);
   if (!cart.length) resetCashReceived();
   renderCart();
+  syncCartWithMonitor();
 };
 
 const renderCart = () => {
@@ -316,6 +340,7 @@ const addProductToCart = (product) => {
     });
   }
   renderCart();
+  syncCartWithMonitor();
   showMessage(`${product.nome} adicionado ao carrinho.`);
   saleBarcode.focus();
 };
@@ -623,6 +648,7 @@ closeCashForm.addEventListener('submit', async (event) => {
     });
     currentSession = null;
     renderSession();
+    publishMonitorState('IDLE', []);
     showMessage(
       `Caixa fechado. Diferença: ${formatBRL(closedSession.diferenca_fechamento || '0')}.`
     );
@@ -681,6 +707,7 @@ miscellaneousForm.addEventListener('submit', (event) => {
   miscellaneousForm.reset();
   miscellaneousPrice.dataset.currencyDigits = '';
   renderCart();
+  syncCartWithMonitor();
   showMessage('Item Diversos adicionado ao carrinho.');
   saleBarcode.focus();
 });
@@ -689,6 +716,7 @@ clearCartButton.addEventListener('click', () => {
   cart = [];
   resetCashReceived();
   renderCart();
+  publishMonitorState('SALE_CANCELLED', []);
   showMessage('Carrinho limpo.');
   saleBarcode.focus();
 });
@@ -776,6 +804,7 @@ checkoutForm.addEventListener('submit', async (event) => {
 
   try {
     const sale = await cashApi.createSale(payload);
+    publishMonitorState('SALE_COMPLETED', cart);
     cart = [];
     renderCart();
     resetCheckout();
@@ -827,6 +856,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     currentUser = user;
     renderSession();
     updateCheckoutMode();
+    publishMonitorState('IDLE', []);
     if (currentSession) saleBarcode.focus();
   } catch (error) {
     showMessage(`Não foi possível iniciar o Caixa: ${error.message}`, true);

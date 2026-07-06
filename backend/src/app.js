@@ -13,6 +13,7 @@ import cashRoutes from './routes/cashRoutes.js';
 import clientsRoutes from './routes/clientsRoutes.js';
 import productsRoutes from './routes/productsRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';
+import monitorRoutes from './routes/monitorRoutes.js';
 import cookieMiddleware from './middlewares/cookieMiddleware.js';
 import notFoundMiddleware from './middlewares/notFoundMiddleware.js';
 import errorHandlerMiddleware from './middlewares/errorHandlerMiddleware.js';
@@ -60,6 +61,7 @@ app.use('/media', mediaRoutes);
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/status', statusRoutes);
+app.use('/api/v1/monitor', monitorRoutes);
 app.use('/api/v1/categories', categoriesRoutes);
 app.use('/api/v1/cash', cashRoutes);
 app.use('/api/v1/products', productsRoutes);

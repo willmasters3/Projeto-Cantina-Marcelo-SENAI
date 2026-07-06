@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import monitorController from '../controllers/monitorController.js';
+import monitorAccountRateLimit from '../middlewares/monitorRateLimitMiddleware.js';
+
+const router = Router();
+
+router.post('/account', monitorAccountRateLimit, monitorController.getAccount);
+router.get('/events', monitorController.streamState);
+
+export default router;

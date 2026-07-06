@@ -15,10 +15,27 @@ const maskCpfForList = (value) => {
   return digits.length === 11 ? `***.***.***-${digits.slice(-2)}` : '—';
 };
 
+const calculateCpfDigit = (cpfBase, factor) => {
+  const total = [...cpfBase].reduce(
+    (sum, digit, index) => sum + Number(digit) * (factor - index),
+    0
+  );
+  const remainder = (total * 10) % 11;
+  return remainder === 10 ? 0 : remainder;
+};
+
+const isValidCpf = (value) => {
+  const cpf = onlyCpfDigits(value);
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  const firstDigit = calculateCpfDigit(cpf.slice(0, 9), 10);
+  const secondDigit = calculateCpfDigit(cpf.slice(0, 10), 11);
+  return firstDigit === Number(cpf[9]) && secondDigit === Number(cpf[10]);
+};
+
 const bindCpfInput = (input) => {
   input.addEventListener('input', () => {
     input.value = formatCpf(input.value);
   });
 };
 
-export { bindCpfInput, formatCpf, maskCpfForList, onlyCpfDigits };
+export { bindCpfInput, formatCpf, isValidCpf, maskCpfForList, onlyCpfDigits };

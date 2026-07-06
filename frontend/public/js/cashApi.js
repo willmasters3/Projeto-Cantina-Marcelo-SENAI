@@ -28,6 +28,10 @@ const closeSession = async (payload) => request('/session/close', {
   method: 'POST',
   body: JSON.stringify(payload)
 });
+const updateMonitorState = async (payload) => request('/monitor-state', {
+  method: 'PUT',
+  body: JSON.stringify(payload)
+});
 const getProductByBarcode = async (barcode) => (
   request(`/products/barcode/${encodeURIComponent(barcode)}`)
 );
@@ -56,5 +60,6 @@ export default {
   listRecentSales,
   openSession,
   searchClients,
-  searchProducts
+  searchProducts,
+  updateMonitorState
 };

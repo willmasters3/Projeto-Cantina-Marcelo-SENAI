@@ -3,19 +3,177 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Autoatendimento da Cantina</title>
+  <title>Monitor da Cantina</title>
   <link rel="stylesheet" href="css/main.css" />
   <link rel="stylesheet" href="css/pages/monitor.css" />
 </head>
-<body>
-  <main class="container monitor-container">
-    <h1>Autoatendimento da Cantina</h1>
-    <p>Área pública de autoatendimento. Em breve será possível consultar cardápio e realizar pedidos com segurança.</p>
-    <div class="monitor-card">
-      <h2>Bem-vindo</h2>
-      <p>Esta página é visualmente separada da área administrativa.</p>
-      <p>Em fases futuras, o acesso será feito por matrícula, PIN ou QR Code.</p>
+<body class="monitor-screen">
+  <header class="monitor-header">
+    <div class="monitor-brand" aria-label="Cantina">
+      <span class="monitor-brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" focusable="false">
+          <circle cx="24" cy="24" r="23"></circle>
+          <path d="M16 11v10M12 11v8c0 3 2 5 4 5s4-2 4-5v-8M16 24v13M29 11c-3 4-4 9-2 14h5v12M32 11v14"></path>
+        </svg>
+      </span>
+      <strong>Cantina</strong>
+      <span id="monitorModeLabel">Consulta de conta</span>
     </div>
+
+    <div id="monitorHint" class="monitor-hint">
+      <span class="monitor-hint-icon" aria-hidden="true">i</span>
+      <div>
+        <strong>Digite seu CPF para consultar suas pendências.</strong>
+        <small>Os dados serão apagados automaticamente após 30 segundos.</small>
+      </div>
+    </div>
+
+    <div class="monitor-clock" aria-label="Data e horário atuais">
+      <div><span aria-hidden="true">◷</span> <strong id="monitorTime">--:--</strong></div>
+      <span id="monitorDate">--/--/----</span>
+    </div>
+  </header>
+
+  <main class="monitor-main">
+    <section id="accountScreen" class="monitor-mode" aria-labelledby="accountTitle">
+      <div class="cpf-query-card">
+        <div class="cpf-query-copy">
+          <h1 id="accountTitle">Informe seu CPF</h1>
+          <p>A consulta é realizada somente pelo CPF.</p>
+
+          <form id="accountForm" class="cpf-query-form">
+            <label class="visually-hidden" for="accountCpf">CPF</label>
+            <div class="cpf-display">
+              <span class="cpf-person-icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48" focusable="false">
+                  <circle cx="24" cy="16" r="8"></circle>
+                  <path d="M10 42c1-11 6-16 14-16s13 5 14 16"></path>
+                </svg>
+              </span>
+              <input
+                id="accountCpf"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                maxlength="14"
+                placeholder="000.000.000-00"
+                aria-describedby="accountMessage"
+                required
+              />
+            </div>
+          </form>
+        </div>
+
+        <div id="cpfKeypad" class="cpf-keypad" aria-label="Teclado numérico">
+          <button type="button" data-digit="1">1</button>
+          <button type="button" data-digit="2">2</button>
+          <button type="button" data-digit="3">3</button>
+          <button type="button" data-digit="4">4</button>
+          <button type="button" data-digit="5">5</button>
+          <button type="button" data-digit="6">6</button>
+          <button type="button" data-digit="7">7</button>
+          <button type="button" data-digit="8">8</button>
+          <button type="button" data-digit="9">9</button>
+          <span aria-hidden="true"></span>
+          <button type="button" data-digit="0">0</button>
+          <button type="button" data-action="backspace" aria-label="Apagar último número">⌫</button>
+        </div>
+
+        <div class="cpf-query-actions">
+          <button id="consultAccountButton" class="monitor-primary-action" type="submit" form="accountForm">
+            <span aria-hidden="true">⌕</span>
+            Consultar
+          </button>
+          <button id="clearAccountButton" class="monitor-secondary-action" type="button">
+            <span aria-hidden="true">⌫</span>
+            Limpar
+          </button>
+        </div>
+      </div>
+
+      <p id="accountMessage" class="monitor-message" aria-live="polite"></p>
+
+      <section id="accountResult" class="account-result" aria-labelledby="accountGreeting" hidden>
+        <div class="account-summary-row">
+          <div class="account-person">
+            <span id="accountInitials" class="account-avatar" aria-hidden="true">C</span>
+            <div>
+              <h2 id="accountGreeting">Olá</h2>
+              <p>CPF <strong id="accountMaskedCpf">***.***.***-**</strong></p>
+            </div>
+          </div>
+          <div class="account-balance-summary">
+            <span>Resumo da conta</span>
+            <div>
+              <small>Saldo pendente</small>
+              <strong id="accountBalance">R$ 0,00</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="monitor-table-wrap">
+          <table class="account-entries-table">
+            <thead>
+              <tr>
+                <th scope="col">Data</th>
+                <th scope="col">Descrição</th>
+                <th scope="col">Tipo</th>
+                <th scope="col">Valor</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody id="accountEntries"></tbody>
+          </table>
+        </div>
+
+        <div class="account-total-row">
+          <span>Total pendente</span>
+          <strong id="accountTotal">R$ 0,00</strong>
+        </div>
+      </section>
+    </section>
+
+    <section id="saleScreen" class="monitor-mode sale-monitor" aria-labelledby="saleMonitorTitle" hidden>
+      <div class="sale-monitor-card">
+        <div class="sale-monitor-heading">
+          <span class="sale-cart-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48" focusable="false">
+              <path d="M6 9h6l5 22h20l5-15H15M20 39a2 2 0 1 0 0 .1M36 39a2 2 0 1 0 0 .1"></path>
+            </svg>
+          </span>
+          <div>
+            <h1 id="saleMonitorTitle">Itens registrados</h1>
+            <p>Os produtos estão sendo adicionados à sua compra.</p>
+          </div>
+        </div>
+
+        <div class="monitor-table-wrap sale-items-wrap">
+          <table class="sale-items-table">
+            <thead>
+              <tr>
+                <th scope="col">Descrição</th>
+                <th scope="col">Qtd.</th>
+                <th scope="col">Preço unit.</th>
+                <th scope="col">Total</th>
+              </tr>
+            </thead>
+            <tbody id="saleMonitorItems"></tbody>
+          </table>
+        </div>
+
+        <div class="sale-total-panel">
+          <div><span>Subtotal</span><strong id="saleMonitorSubtotal">R$ 0,00</strong></div>
+          <div class="sale-grand-total"><span>Total a pagar</span><strong id="saleMonitorTotal">R$ 0,00</strong></div>
+        </div>
+
+        <p id="saleMonitorStatus" class="sale-monitor-status" aria-live="polite">
+          Acompanhe os itens registrados pelo operador.
+        </p>
+      </div>
+    </section>
   </main>
+
+  <footer class="monitor-footer" aria-hidden="true"><span></span></footer>
+  <script type="module" src="js/monitorApp.js"></script>
 </body>
 </html>
