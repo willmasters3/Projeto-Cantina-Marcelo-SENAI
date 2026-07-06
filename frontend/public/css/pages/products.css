@@ -52,16 +52,100 @@
   padding: 0.65rem var(--space-4);
 }
 
+.product-image-field {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.product-image-field h3,
+.product-image-field p {
+  margin-bottom: 0;
+}
+
+.product-image-field > div > p {
+  margin-top: 0.2rem;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-help);
+}
+
+.product-image-editor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+#productImagePreview {
+  width: 132px;
+  height: 132px;
+  flex: 0 0 auto;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  object-fit: contain;
+}
+
+.product-image-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.product-image-actions button {
+  padding: 0.65rem var(--space-4);
+}
+
+.product-image-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.image-feedback {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-success-strong);
+  font-size: var(--font-size-help);
+}
+
+.image-feedback.error {
+  color: var(--color-danger-strong);
+}
+
 #productList {
   margin-top: var(--space-4);
 }
 
 .product-card {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: var(--space-4);
   margin-bottom: var(--space-4);
   padding: var(--space-4);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface-muted);
+}
+
+.product-card-image {
+  width: 132px;
+  height: 132px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  object-fit: contain;
+}
+
+.product-card-content {
+  min-width: 0;
 }
 
 .product-card h3 {
@@ -88,5 +172,19 @@
 @media (max-width: 760px) {
   #productSearchForm {
     display: grid;
+  }
+
+  .product-image-editor {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .product-card {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+
+  .product-card-image {
+    width: 88px;
+    height: 88px;
   }
 }

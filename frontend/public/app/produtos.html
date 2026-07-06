@@ -85,6 +85,35 @@
           <label for="productDescription">Descrição</label>
           <textarea id="productDescription" rows="3" placeholder="Opcional"></textarea>
 
+          <section class="product-image-field" aria-labelledby="productImageTitle">
+            <div>
+              <h3 id="productImageTitle">Imagem do produto</h3>
+              <p>Opcional. Envie JPEG, PNG ou WebP de até 5 MB.</p>
+            </div>
+            <div class="product-image-editor">
+              <img
+                id="productImagePreview"
+                src="/assets/product-placeholder.svg"
+                alt="Prévia da imagem do produto"
+              />
+              <div class="product-image-actions">
+                <input
+                  id="productImageInput"
+                  class="product-image-input"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                />
+                <button id="chooseProductImageButton" class="secondary-action" type="button">
+                  Selecionar imagem
+                </button>
+                <button id="removeProductImageButton" class="danger-action" type="button" hidden>
+                  Remover imagem
+                </button>
+                <p id="productImageFeedback" class="image-feedback" aria-live="polite"></p>
+              </div>
+            </div>
+          </section>
+
           <div class="form-field">
             <label for="productPrice">Preço de venda</label>
             <p id="productPriceHelp" class="field-help">Valor cobrado do cliente.</p>

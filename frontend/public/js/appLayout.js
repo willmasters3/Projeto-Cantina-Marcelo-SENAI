@@ -27,7 +27,9 @@ const configureNavigation = (roleSlug) => {
 const initHeader = async () => {
   try {
     const { user } = await authApi.me();
-    userName.textContent = `${user.nome} · ${user.role.nome}`;
+    userName.textContent = document.body.classList.contains('cash-screen')
+      ? user.nome
+      : `${user.nome} · ${user.role.nome}`;
     configureNavigation(user.role.slug);
   } catch (error) {
     window.location.href = '/login';

@@ -19,6 +19,11 @@ const productPriceInput = document.getElementById('productPrice');
 const productCostInput = document.getElementById('productCost');
 const productStockInput = document.getElementById('productStock');
 const productMinStockInput = document.getElementById('productMinStock');
+const productImageInput = document.getElementById('productImageInput');
+const productImagePreview = document.getElementById('productImagePreview');
+const chooseProductImageButton = document.getElementById('chooseProductImageButton');
+const removeProductImageButton = document.getElementById('removeProductImageButton');
+const productImageFeedback = document.getElementById('productImageFeedback');
 const barcodeFeedback = document.getElementById('barcodeFeedback');
 const barcodeFeedbackMessage = document.getElementById('barcodeFeedbackMessage');
 const openExistingProductButton = document.getElementById('openExistingProductButton');
@@ -26,10 +31,22 @@ const productSubmitButton = document.getElementById('productSubmitButton');
 const cancelProductEditButton = document.getElementById('cancelProductEditButton');
 const productFormTitle = document.getElementById('productFormTitle');
 const barcodeNumbersOnlyMessage = 'Código de barras deve conter somente números.';
+const productPlaceholderUrl = '/assets/product-placeholder.svg';
+const allowedImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const allowedImageExtensions = new Set(['jpg', 'jpeg', 'png', 'webp']);
+const imageExtensionsByType = new Map([
+  ['image/jpeg', new Set(['jpg', 'jpeg'])],
+  ['image/png', new Set(['png'])],
+  ['image/webp', new Set(['webp'])]
+]);
+const maxImageSizeBytes = 5 * 1024 * 1024;
 
 let duplicateProduct = null;
 let editingProductId = null;
 let editingProductActive = true;
+let currentProductImageUrl = null;
+let selectedProductImage = null;
+let previewObjectUrl = null;
 
 bindCurrencyInput(productPriceInput);
 bindCurrencyInput(productCostInput);
@@ -52,9 +69,22 @@ const renderProducts = (products) => {
     const item = document.createElement('div');
     item.className = 'product-card';
 
+    const image = document.createElement('img');
+    image.className = 'product-card-image';
+    image.src = product.imagem_url || productPlaceholderUrl;
+    image.alt = `Imagem de ${product.nome}`;
+    image.loading = 'lazy';
+    image.addEventListener('error', () => {
+      if (!image.src.endsWith(productPlaceholderUrl)) image.src = productPlaceholderUrl;
+    });
+    item.appendChild(image);
+
+    const content = document.createElement('div');
+    content.className = 'product-card-content';
+
     const title = document.createElement('h3');
     title.textContent = product.nome;
-    item.appendChild(title);
+    content.appendChild(title);
 
     const details = [
       ['Código de barras', product.codigo_barras || 'Não informado'],
@@ -69,7 +99,7 @@ const renderProducts = (products) => {
       const labelElement = document.createElement('strong');
       labelElement.textContent = `${label}: `;
       line.append(labelElement, document.createTextNode(value));
-      item.appendChild(line);
+      content.appendChild(line);
     });
 
     const editButton = document.createElement('button');
@@ -77,9 +107,67 @@ const renderProducts = (products) => {
     editButton.className = 'secondary-action product-edit-button';
     editButton.textContent = 'Editar produto';
     editButton.addEventListener('click', () => openProductEditor(product));
-    item.appendChild(editButton);
+    content.appendChild(editButton);
+    item.appendChild(content);
     productList.appendChild(item);
   });
+};
+
+const showImageFeedback = (message = '', isError = false) => {
+  productImageFeedback.textContent = message;
+  productImageFeedback.className = message
+    ? `image-feedback ${isError ? 'error' : 'success'}`
+    : 'image-feedback';
+};
+
+const revokePreviewObjectUrl = () => {
+  if (!previewObjectUrl) return;
+  URL.revokeObjectURL(previewObjectUrl);
+  previewObjectUrl = null;
+};
+
+const setProductImagePreview = (url = null) => {
+  productImagePreview.src = url || productPlaceholderUrl;
+};
+
+const validateSelectedImage = (file) => {
+  if (!allowedImageTypes.has(file.type)) {
+    return 'Selecione uma imagem JPEG, PNG ou WebP.';
+  }
+  const extension = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
+  if (!allowedImageExtensions.has(extension) || !imageExtensionsByType.get(file.type)?.has(extension)) {
+    return 'A extensão do arquivo não corresponde ao formato da imagem.';
+  }
+  if (file.size <= 0 || file.size > maxImageSizeBytes) {
+    return 'A imagem deve ter no máximo 5 MB.';
+  }
+  return null;
+};
+
+const clearSelectedImage = () => {
+  revokePreviewObjectUrl();
+  selectedProductImage = null;
+  productImageInput.value = '';
+};
+
+const resetProductImageEditor = () => {
+  clearSelectedImage();
+  currentProductImageUrl = null;
+  setProductImagePreview();
+  chooseProductImageButton.textContent = 'Selecionar imagem';
+  removeProductImageButton.hidden = true;
+  showImageFeedback();
+};
+
+const loadProductImageEditor = (product) => {
+  clearSelectedImage();
+  currentProductImageUrl = product.imagem_url || null;
+  setProductImagePreview(currentProductImageUrl);
+  chooseProductImageButton.textContent = currentProductImageUrl
+    ? 'Trocar imagem'
+    : 'Selecionar imagem';
+  removeProductImageButton.hidden = !currentProductImageUrl;
+  showImageFeedback();
 };
 
 const hideBarcodeFeedback = () => {
@@ -123,6 +211,7 @@ const resetProductForm = () => {
   productFormTitle.textContent = 'Cadastrar produto';
   productSubmitButton.textContent = 'Cadastrar produto';
   cancelProductEditButton.hidden = true;
+  resetProductImageEditor();
   hideBarcodeFeedback();
   barcodeInput.focus();
 };
@@ -139,6 +228,7 @@ const openProductEditor = (product) => {
   setCurrencyInputDecimalValue(productCostInput, product.custo);
   productStockInput.value = product.estoque_atual ?? '';
   productMinStockInput.value = product.estoque_minimo ?? 0;
+  loadProductImageEditor(product);
   productFormTitle.textContent = `Editar produto: ${product.nome}`;
   productSubmitButton.textContent = 'Salvar alterações';
   cancelProductEditButton.hidden = false;
@@ -262,16 +352,35 @@ productForm.addEventListener('submit', async (event) => {
       ativo: editingProductId ? editingProductActive : true
     };
 
-    if (editingProductId) {
-      await adminApi.updateProduct(editingProductId, productData);
-      resetProductForm();
-      showMessage(productMessage, 'Produto atualizado com sucesso.');
-    } else {
-      await adminApi.createProduct(productData);
-      resetProductForm();
-      showMessage(productMessage, 'Produto cadastrado com sucesso.');
+    const isEditing = Boolean(editingProductId);
+    const imageToUpload = selectedProductImage;
+    const savedProduct = isEditing
+      ? await adminApi.updateProduct(editingProductId, productData)
+      : await adminApi.createProduct(productData);
+
+    let imageUploadError = null;
+    if (imageToUpload) {
+      try {
+        await adminApi.uploadProductImage(savedProduct.id, imageToUpload);
+      } catch (error) {
+        imageUploadError = error;
+      }
     }
+
+    resetProductForm();
     await loadProducts();
+    if (imageUploadError) {
+      showMessage(
+        productMessage,
+        `Produto ${isEditing ? 'atualizado' : 'cadastrado'} com sucesso, mas a imagem falhou: ${imageUploadError.message}`,
+        true
+      );
+    } else {
+      showMessage(
+        productMessage,
+        `Produto ${isEditing ? 'atualizado' : 'cadastrado'} com sucesso.`
+      );
+    }
   } catch (error) {
     showMessage(productMessage, error.message, true);
     if (error.status === 409 && barcodeInput.value.trim()) {
@@ -314,6 +423,63 @@ barcodeInput.addEventListener('paste', (event) => {
 barcodeInput.addEventListener('input', () => {
   duplicateProduct = null;
   if (validateBarcodeInput()) hideBarcodeFeedback();
+});
+
+chooseProductImageButton.addEventListener('click', () => {
+  productImageInput.click();
+});
+
+productImageInput.addEventListener('change', () => {
+  const file = productImageInput.files?.[0];
+  if (!file) return;
+
+  const validationError = validateSelectedImage(file);
+  if (validationError) {
+    clearSelectedImage();
+    setProductImagePreview(currentProductImageUrl);
+    showImageFeedback(validationError, true);
+    return;
+  }
+
+  revokePreviewObjectUrl();
+  selectedProductImage = file;
+  previewObjectUrl = URL.createObjectURL(file);
+  setProductImagePreview(previewObjectUrl);
+  chooseProductImageButton.textContent = currentProductImageUrl
+    ? 'Trocar imagem selecionada'
+    : 'Alterar imagem selecionada';
+  showImageFeedback('Prévia carregada. A imagem será enviada ao salvar o produto.');
+});
+
+productImagePreview.addEventListener('error', () => {
+  const failedSelectedPreview = Boolean(previewObjectUrl);
+  if (failedSelectedPreview) {
+    clearSelectedImage();
+    showImageFeedback('Não foi possível visualizar esta imagem.', true);
+  }
+  if (!productImagePreview.src.endsWith(productPlaceholderUrl)) {
+    setProductImagePreview(failedSelectedPreview ? currentProductImageUrl : null);
+  }
+});
+
+removeProductImageButton.addEventListener('click', async () => {
+  if (!editingProductId || !currentProductImageUrl) return;
+  removeProductImageButton.disabled = true;
+  try {
+    await adminApi.removeProductImage(editingProductId);
+    clearSelectedImage();
+    currentProductImageUrl = null;
+    setProductImagePreview();
+    chooseProductImageButton.textContent = 'Selecionar imagem';
+    removeProductImageButton.hidden = true;
+    showImageFeedback('Imagem removida com sucesso.');
+    showMessage(productMessage, 'Imagem do produto removida com sucesso.');
+    await loadProducts(productSearchInput.value);
+  } catch (error) {
+    showImageFeedback(error.message, true);
+  } finally {
+    removeProductImageButton.disabled = false;
+  }
 });
 
 openExistingProductButton.addEventListener('click', () => {

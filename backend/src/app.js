@@ -12,6 +12,7 @@ import categoriesRoutes from './routes/categoriesRoutes.js';
 import cashRoutes from './routes/cashRoutes.js';
 import clientsRoutes from './routes/clientsRoutes.js';
 import productsRoutes from './routes/productsRoutes.js';
+import mediaRoutes from './routes/mediaRoutes.js';
 import cookieMiddleware from './middlewares/cookieMiddleware.js';
 import notFoundMiddleware from './middlewares/notFoundMiddleware.js';
 import errorHandlerMiddleware from './middlewares/errorHandlerMiddleware.js';
@@ -26,6 +27,7 @@ const shouldSkipRequestLog = (req, res) => {
   const isStaticRequest = requestPath.startsWith('/css/')
     || requestPath.startsWith('/js/')
     || requestPath.startsWith('/assets/')
+    || requestPath.startsWith('/media/')
     || requestPath === '/favicon.ico';
 
   if (isStaticRequest || res.statusCode === 304) return true;
@@ -52,7 +54,9 @@ app.use(morgan('dev', { skip: shouldSkipRequestLog }));
 
 app.use('/css', express.static(path.join(frontendPath, 'css'), { index: false }));
 app.use('/js', express.static(path.join(frontendPath, 'js'), { index: false }));
+app.use('/assets', express.static(path.join(frontendPath, 'assets'), { index: false }));
 app.use('/', pageRoutes);
+app.use('/media', mediaRoutes);
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/status', statusRoutes);

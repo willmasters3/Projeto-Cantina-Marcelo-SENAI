@@ -21,6 +21,11 @@ import {
 } from '../src/utils/fixedDecimal.js';
 import productsRepository from '../src/repositories/productsRepository.js';
 import productsService from '../src/services/productsService.js';
+import productImagesService, {
+  generatedFilenamePattern,
+  getSafeStoragePath
+} from '../src/services/productImagesService.js';
+import { detectImageMime } from '../src/middlewares/productImageUploadMiddleware.js';
 import statusRepository from '../src/repositories/statusRepository.js';
 import { isValidOptionalBarcode } from '../src/validators/productsValidator.js';
 
@@ -46,6 +51,8 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
   const originalGetProductByBarcode = productsService.getProductByBarcode;
   const originalCreateProduct = productsService.createProduct;
   const originalUpdateProduct = productsService.updateProduct;
+  const originalUploadProductImage = productImagesService.uploadPrimaryImage;
+  const originalRemoveProductImage = productImagesService.removePrimaryImage;
   const originalFindProductByBarcode = productsRepository.findByBarcode;
   const originalFindCategoryByName = categoriesRepository.findByName;
   const originalCreateCategoryRecord = categoriesRepository.createCategory;
@@ -550,6 +557,150 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
       }
     });
 
+    await t.test('valida e protege upload, troca e remoção de imagem de produto', async () => {
+      const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0x00]);
+      const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+      const webp = Buffer.from('RIFF0000WEBP', 'ascii');
+      assert.equal(detectImageMime(jpeg), 'image/jpeg');
+      assert.equal(detectImageMime(png), 'image/png');
+      assert.equal(detectImageMime(webp), 'image/webp');
+      assert.equal(detectImageMime(Buffer.from('<svg></svg>')), null);
+      assert.match('product-2-8f4c21.webp', generatedFilenamePattern);
+      assert.throws(() => getSafeStoragePath('../produto.png'), /Nome de arquivo/);
+
+      let receivedUpload = null;
+      let removedProductId = null;
+      productImagesService.uploadPrimaryImage = async (productId, upload) => {
+        receivedUpload = { productId, upload };
+        return { produto_id: Number(productId), imagem_url: '/media/products/product-2-a1b2c3.png' };
+      };
+      productImagesService.removePrimaryImage = async (productId) => {
+        removedProductId = productId;
+        return { removida: true };
+      };
+      authService.getUserBySessionToken = async () => adminUser;
+
+      try {
+        const uploaded = await request('/api/v1/products/2/image', {
+          method: 'POST',
+          headers: {
+            cookie: 'cantina_session=admin-session',
+            'content-type': 'image/png',
+            'x-file-name': encodeURIComponent('foto produto.png')
+          },
+          body: png
+        });
+        assert.equal(uploaded.status, 201);
+        assert.equal(receivedUpload.productId, '2');
+        assert.equal(receivedUpload.upload.mimeType, 'image/png');
+        assert.equal(receivedUpload.upload.size, png.length);
+
+        const invalidMime = await request('/api/v1/products/2/image', {
+          method: 'POST',
+          headers: {
+            cookie: 'cantina_session=admin-session',
+            'content-type': 'image/svg+xml',
+            'x-file-name': 'produto.svg'
+          },
+          body: '<svg></svg>'
+        });
+        assert.equal(invalidMime.status, 415);
+
+        const invalidExtension = await request('/api/v1/products/2/image', {
+          method: 'POST',
+          headers: {
+            cookie: 'cantina_session=admin-session',
+            'content-type': 'image/png',
+            'x-file-name': 'produto.jpg'
+          },
+          body: png
+        });
+        assert.equal(invalidExtension.status, 415);
+
+        const forgedImage = await request('/api/v1/products/2/image', {
+          method: 'POST',
+          headers: {
+            cookie: 'cantina_session=admin-session',
+            'content-type': 'image/png',
+            'x-file-name': 'produto.png'
+          },
+          body: 'não é uma imagem'
+        });
+        assert.equal(forgedImage.status, 415);
+
+        const traversedName = await request('/api/v1/products/2/image', {
+          method: 'POST',
+          headers: {
+            cookie: 'cantina_session=admin-session',
+            'content-type': 'image/png',
+            'x-file-name': encodeURIComponent('../produto.png')
+          },
+          body: png
+        });
+        assert.equal(traversedName.status, 422);
+
+        const oversizedImage = await request('/api/v1/products/2/image', {
+          method: 'POST',
+          headers: {
+            cookie: 'cantina_session=admin-session',
+            'content-type': 'image/png',
+            'x-file-name': 'produto.png'
+          },
+          body: Buffer.alloc(5 * 1024 * 1024 + 1)
+        });
+        assert.equal(oversizedImage.status, 413);
+
+        authService.getUserBySessionToken = async () => ({
+          ...adminUser,
+          role: { slug: 'OPERADOR_CAIXA', nome: 'Operador de Caixa' }
+        });
+        const forbidden = await request('/api/v1/products/2/image', {
+          method: 'DELETE',
+          headers: { cookie: 'cantina_session=operator-session' }
+        });
+        assert.equal(forbidden.status, 403);
+
+        authService.getUserBySessionToken = async () => adminUser;
+        const removed = await request('/api/v1/products/2/image', {
+          method: 'DELETE',
+          headers: { cookie: 'cantina_session=admin-session' }
+        });
+        assert.equal(removed.status, 200);
+        assert.equal(removedProductId, '2');
+
+        const invalidPublicImage = await request('/media/products/produto.svg');
+        assert.equal(invalidPublicImage.status, 404);
+        const placeholder = await request('/assets/product-placeholder.svg');
+        assert.equal(placeholder.status, 200);
+      } finally {
+        productImagesService.uploadPrimaryImage = originalUploadProductImage;
+        productImagesService.removePrimaryImage = originalRemoveProductImage;
+      }
+    });
+
+    await t.test('integra imagem opcional nas telas de Produtos e Caixa', async () => {
+      const files = await Promise.all([
+        fs.readFile(path.join(frontendPath, 'app/produtos.html'), 'utf8'),
+        fs.readFile(path.join(frontendPath, 'js/productsApp.js'), 'utf8'),
+        fs.readFile(path.join(frontendPath, 'js/cashApp.js'), 'utf8'),
+        fs.readFile(path.resolve(__dirname, '../src/repositories/productsRepository.js'), 'utf8'),
+        fs.readFile(path.resolve(__dirname, '../src/repositories/cashRepository.js'), 'utf8'),
+        fs.readFile(path.resolve(__dirname, '../../database/scripts/005_create_product_images.sql'), 'utf8')
+      ]);
+      assert.match(files[0], /id="productImageInput"/);
+      assert.match(files[0], /image\/jpeg,image\/png,image\/webp/);
+      assert.match(files[1], /uploadProductImage\(savedProduct\.id, imageToUpload\)/);
+      assert.match(files[1], /mas a imagem falhou/);
+      assert.match(files[1], /removeProductImage\(editingProductId\)/);
+      assert.match(files[2], /product\.imagem_url \|\| productPlaceholderUrl/);
+      assert.match(files[2], /item\.imageUrl \|\| productPlaceholderUrl/);
+      assert.match(files[3], /pi\.caminho_publico AS imagem_url/);
+      assert.match(files[4], /pi\.caminho_publico AS imagem_url/);
+      assert.match(files[5], /GENERATED ALWAYS AS/);
+      assert.match(files[5], /uq_product_images_principal_ativa/);
+      assert.doesNotMatch(files[5], /\bBLOB\b/i);
+    });
+
     await t.test('protege e processa a API de Clientes para administrador e operador', async () => {
       const client = {
         id: 1,
@@ -900,6 +1051,8 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
     productsService.getProductByBarcode = originalGetProductByBarcode;
     productsService.createProduct = originalCreateProduct;
     productsService.updateProduct = originalUpdateProduct;
+    productImagesService.uploadPrimaryImage = originalUploadProductImage;
+    productImagesService.removePrimaryImage = originalRemoveProductImage;
     productsRepository.findByBarcode = originalFindProductByBarcode;
     categoriesRepository.findByName = originalFindCategoryByName;
     categoriesRepository.createCategory = originalCreateCategoryRecord;

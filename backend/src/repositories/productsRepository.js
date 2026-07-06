@@ -15,10 +15,15 @@ const findAll = async ({ activeOnly = true, search = '', barcode = '', categoryI
     p.estoque_atual,
     p.estoque_minimo,
     p.ativo,
+    pi.caminho_publico AS imagem_url,
     p.criado_em,
     p.atualizado_em
   FROM products p
-  LEFT JOIN categories c ON p.categoria_id = c.id`;
+  LEFT JOIN categories c ON p.categoria_id = c.id
+  LEFT JOIN product_images pi
+    ON pi.produto_id = p.id
+   AND pi.imagem_principal = 1
+   AND pi.removida_em IS NULL`;
 
   if (activeOnly) {
     conditions.push('p.ativo = 1');
@@ -62,10 +67,15 @@ const findById = async (id) => {
       p.estoque_atual,
       p.estoque_minimo,
       p.ativo,
+      pi.caminho_publico AS imagem_url,
       p.criado_em,
       p.atualizado_em
     FROM products p
     LEFT JOIN categories c ON p.categoria_id = c.id
+    LEFT JOIN product_images pi
+      ON pi.produto_id = p.id
+     AND pi.imagem_principal = 1
+     AND pi.removida_em IS NULL
     WHERE p.id = ?`,
     [id]
   );
@@ -86,10 +96,15 @@ const findByBarcode = async (barcode, activeOnly = true) => {
     p.estoque_atual,
     p.estoque_minimo,
     p.ativo,
+    pi.caminho_publico AS imagem_url,
     p.criado_em,
     p.atualizado_em
   FROM products p
   LEFT JOIN categories c ON p.categoria_id = c.id
+  LEFT JOIN product_images pi
+    ON pi.produto_id = p.id
+   AND pi.imagem_principal = 1
+   AND pi.removida_em IS NULL
   WHERE p.codigo_barras = ?`;
 
   if (activeOnly) {

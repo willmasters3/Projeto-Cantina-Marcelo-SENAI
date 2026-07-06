@@ -65,6 +65,7 @@ const cancelSaleNumber = document.getElementById('cancelSaleNumber');
 const cancelSaleForm = document.getElementById('cancelSaleForm');
 const cancelSaleReason = document.getElementById('cancelSaleReason');
 const dismissCancelSaleButton = document.getElementById('dismissCancelSaleButton');
+const productPlaceholderUrl = '/assets/product-placeholder.svg';
 
 let currentSession = null;
 let currentUser = null;
@@ -89,6 +90,11 @@ const createCell = (value) => {
   const cell = document.createElement('td');
   cell.textContent = value;
   return cell;
+};
+
+const useProductPlaceholder = (event) => {
+  const image = event.currentTarget;
+  if (!image.src.endsWith(productPlaceholderUrl)) image.src = productPlaceholderUrl;
 };
 
 const getCartTotal = () => cart.reduce(
@@ -209,13 +215,21 @@ const renderCart = () => {
   cart.forEach((item) => {
     const row = document.createElement('tr');
     const itemCell = document.createElement('td');
+    itemCell.className = 'cart-product-cell';
+    const itemVisual = document.createElement('img');
+    itemVisual.className = 'cart-product-visual';
+    itemVisual.src = item.imageUrl || productPlaceholderUrl;
+    itemVisual.alt = '';
+    itemVisual.addEventListener('error', useProductPlaceholder);
+    const itemDetails = document.createElement('div');
     const itemName = document.createElement('strong');
     itemName.textContent = item.name;
     const itemMeta = document.createElement('span');
     itemMeta.textContent = item.type === 'PRODUTO'
       ? `Código: ${item.barcode || 'não informado'}`
       : 'Item sem código de barras';
-    itemCell.append(itemName, itemMeta);
+    itemDetails.append(itemName, itemMeta);
+    itemCell.append(itemVisual, itemDetails);
 
     const quantityCell = document.createElement('td');
     const quantityControl = document.createElement('div');
@@ -286,6 +300,7 @@ const addProductToCart = (product) => {
   if (existing) {
     existing.quantity = nextQuantity;
     existing.stock = product.estoque_atual;
+    existing.imageUrl = product.imagem_url || null;
   } else {
     cart.push({
       id,
@@ -294,6 +309,7 @@ const addProductToCart = (product) => {
       name: product.nome,
       barcode: product.codigo_barras,
       unitPrice: product.preco_venda,
+      imageUrl: product.imagem_url || null,
       stock: product.estoque_atual,
       quantity: 1
     });
@@ -345,9 +361,12 @@ const renderQuickProducts = (products) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'quick-product-card';
-    const visual = document.createElement('span');
+    const visual = document.createElement('img');
     visual.className = 'quick-product-visual';
-    visual.setAttribute('aria-hidden', 'true');
+    visual.src = product.imagem_url || productPlaceholderUrl;
+    visual.alt = `Imagem de ${product.nome}`;
+    visual.loading = 'lazy';
+    visual.addEventListener('error', useProductPlaceholder);
     const name = document.createElement('strong');
     name.textContent = product.nome;
     const price = document.createElement('span');
@@ -457,7 +476,10 @@ const renderSession = () => {
   const openedAt = new Date(currentSession.aberto_em);
   sessionOpenedAt.textContent = Number.isNaN(openedAt.getTime())
     ? 'Caixa aberto'
-    : `Aberto às ${openedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    : `Aberto às ${openedAt.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    })}\n${openedAt.toLocaleDateString('pt-BR')}`;
   sessionOpeningAmount.textContent = formatBRL(currentSession.valor_abertura);
   sessionExpectedAmount.textContent = formatBRL(currentSession.valor_esperado_atual);
   saleBarcode.focus();
@@ -468,7 +490,6 @@ const loadSession = async () => {
   renderSession();
 };
 
-const formatSaleType = (value) => value === 'FIADO' ? 'Fiado' : 'À vista';
 const formatPaymentMethods = (value) => value
   ? value.split(', ').map((method) => method.charAt(0) + method.slice(1).toLowerCase()).join(', ')
   : 'Fiado';
@@ -494,7 +515,7 @@ const renderRecentSales = (sales) => {
   const table = document.createElement('table');
   const head = document.createElement('thead');
   const headRow = document.createElement('tr');
-  ['Venda', 'Data', 'Tipo', 'Cliente', 'Pagamento', 'Total', 'Status', 'Ação'].forEach((title) => {
+  ['Venda', 'Data', 'Cliente', 'Pagamento', 'Total', 'Status', 'Ação'].forEach((title) => {
     const header = document.createElement('th');
     header.scope = 'col';
     header.textContent = title;
@@ -528,7 +549,6 @@ const renderRecentSales = (sales) => {
     row.append(
       createCell(`#${sale.id}`),
       createCell(new Date(sale.confirmada_em).toLocaleString('pt-BR')),
-      createCell(formatSaleType(sale.tipo_venda)),
       createCell(sale.cliente_nome || '—'),
       createCell(formatPaymentMethods(sale.formas_pagamento)),
       createCell(formatBRL(sale.total)),

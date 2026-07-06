@@ -48,11 +48,26 @@ const updateProduct = async (id, payload) => request(`/products/${id}`, {
   body: JSON.stringify(payload)
 });
 
+const uploadProductImage = async (id, file) => request(`/products/${id}/image`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': file.type,
+    'X-File-Name': encodeURIComponent(file.name)
+  },
+  body: file
+});
+
+const removeProductImage = async (id) => request(`/products/${id}/image`, {
+  method: 'DELETE'
+});
+
 export default {
   listCategories,
   createCategory,
   listProducts,
+  removeProductImage,
   createProduct,
   getProductByBarcode,
+  uploadProductImage,
   updateProduct
 };

@@ -134,7 +134,8 @@
           <div id="saleWorkspace" class="pdv-grid" hidden>
             <section class="card product-entry-card" aria-labelledby="productEntryTitle">
               <div class="section-heading">
-                <div>
+                <div class="panel-title-row">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 1.9-1.4L21 8H7" /><circle cx="10" cy="19" r="1.3" /><circle cx="18" cy="19" r="1.3" /></svg>
                   <h2 id="productEntryTitle">Adicionar produtos</h2>
                 </div>
               </div>
@@ -153,7 +154,6 @@
                     pattern="[0-9]*"
                     placeholder="Passe ou digite o código de barras aqui"
                   />
-                  <button type="submit">Adicionar</button>
                 </div>
                 <p class="scanner-help">Leitor USB funciona como teclado</p>
               </form>
@@ -212,7 +212,8 @@
 
             <section class="card cart-card" aria-labelledby="cartTitle">
               <div class="section-heading cart-heading">
-                <div>
+                <div class="panel-title-row">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 10.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 1.9-1.4L21 8H7" /><circle cx="10" cy="19" r="1.3" /><circle cx="18" cy="19" r="1.3" /></svg>
                   <h2 id="cartTitle">Carrinho de compras</h2>
                 </div>
                 <div class="cart-heading-actions">
@@ -246,8 +247,8 @@
                 <fieldset class="sale-type-fieldset">
                   <legend>Tipo de venda</legend>
                   <div class="sale-type-segments" role="group" aria-label="Tipo de venda">
-                    <button id="cashSaleTypeButton" class="sale-type-button active" type="button" data-sale-type="A_VISTA" aria-pressed="true">Venda à vista</button>
-                    <button id="creditSaleTypeButton" class="sale-type-button" type="button" data-sale-type="FIADO" aria-pressed="false">Pagar depois / Fiado</button>
+                    <button id="cashSaleTypeButton" class="sale-type-button active" type="button" data-sale-type="A_VISTA" aria-pressed="true">À vista</button>
+                    <button id="creditSaleTypeButton" class="sale-type-button" type="button" data-sale-type="FIADO" aria-pressed="false">Fiado</button>
                   </div>
                   <select id="saleType" class="cash-technical-select" aria-label="Tipo de venda selecionado" tabindex="-1">
                     <option value="A_VISTA">Venda à vista</option>
@@ -281,7 +282,7 @@
                     </div>
                   </div>
                   <details class="transaction-reference-panel">
-                    <summary>Referências opcionais da transação</summary>
+                    <summary>Mais opções da venda</summary>
                     <div class="cash-reference-grid">
                       <div class="form-field">
                         <label for="paymentNsu">NSU</label>
@@ -295,6 +296,10 @@
                         <label for="paymentReference">Referência</label>
                         <input id="paymentReference" type="text" maxlength="150" />
                       </div>
+                    </div>
+                    <div class="form-field transaction-notes-field">
+                      <label for="saleNotes">Observações</label>
+                      <textarea id="saleNotes" rows="2" maxlength="500" placeholder="Opcional"></textarea>
                     </div>
                   </details>
                 </div>
@@ -322,11 +327,6 @@
                   <p id="selectedCreditClient" class="selected-client">Nenhum cliente selecionado.</p>
                 </div>
 
-                <div class="form-field">
-                  <label for="saleNotes">Observações</label>
-                  <textarea id="saleNotes" rows="2" maxlength="500" placeholder="Opcional"></textarea>
-                </div>
-
                 <button id="finishSaleButton" class="finish-sale-button" type="submit">
                   Confirmar venda
                 </button>
@@ -351,7 +351,8 @@
 
           <section class="card recent-sales-card" aria-labelledby="recentSalesTitle">
             <div class="section-heading">
-              <div>
+              <div class="panel-title-row">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" /></svg>
                 <h2 id="recentSalesTitle">Vendas recentes</h2>
                 <p>Histórico operacional para conferência e cancelamento administrativo.</p>
               </div>

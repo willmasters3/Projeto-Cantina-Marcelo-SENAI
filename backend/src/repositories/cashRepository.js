@@ -116,10 +116,16 @@ const findSessionById = async (id, executor = pool) => {
 
 const findProductByBarcode = async (barcode, executor = pool) => {
   const [rows] = await executor.query(
-    `SELECT id, codigo_barras, nome, preco_venda, custo, estoque_atual, ativo
-     FROM products
-     WHERE codigo_barras = ?
-       AND ativo = 1
+    `SELECT
+       p.id, p.codigo_barras, p.nome, p.preco_venda, p.custo,
+       p.estoque_atual, p.ativo, pi.caminho_publico AS imagem_url
+     FROM products p
+     LEFT JOIN product_images pi
+       ON pi.produto_id = p.id
+      AND pi.imagem_principal = 1
+      AND pi.removida_em IS NULL
+     WHERE p.codigo_barras = ?
+       AND p.ativo = 1
      LIMIT 1`,
     [barcode]
   );
@@ -129,11 +135,17 @@ const findProductByBarcode = async (barcode, executor = pool) => {
 const searchProducts = async (search, executor = pool) => {
   const term = `%${search}%`;
   const [rows] = await executor.query(
-    `SELECT id, codigo_barras, nome, preco_venda, custo, estoque_atual, ativo
-     FROM products
-     WHERE ativo = 1
-       AND (nome LIKE ? OR codigo_barras LIKE ?)
-     ORDER BY nome ASC
+    `SELECT
+       p.id, p.codigo_barras, p.nome, p.preco_venda, p.custo,
+       p.estoque_atual, p.ativo, pi.caminho_publico AS imagem_url
+     FROM products p
+     LEFT JOIN product_images pi
+       ON pi.produto_id = p.id
+      AND pi.imagem_principal = 1
+      AND pi.removida_em IS NULL
+     WHERE p.ativo = 1
+       AND (p.nome LIKE ? OR p.codigo_barras LIKE ?)
+     ORDER BY p.nome ASC
      LIMIT 20`,
     [term, term]
   );

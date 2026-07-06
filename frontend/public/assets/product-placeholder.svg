@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img" aria-labelledby="title description">
+  <title id="title">Produto sem imagem</title>
+  <desc id="description">Ilustração neutra de uma embalagem de produto</desc>
+  <rect width="320" height="320" rx="36" fill="#f1f5f9" />
+  <path d="M91 106 160 68l69 38v108l-69 38-69-38Z" fill="#dbeafe" stroke="#3b82f6" stroke-width="8" stroke-linejoin="round" />
+  <path d="m91 106 69 39 69-39M160 145v107" fill="none" stroke="#3b82f6" stroke-width="8" stroke-linejoin="round" />
+  <path d="M126 125 195 87" fill="none" stroke="#93c5fd" stroke-width="8" stroke-linecap="round" />
+</svg>
