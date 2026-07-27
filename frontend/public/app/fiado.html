@@ -29,15 +29,163 @@
         <button id="logoutButton">Sair</button>
       </header>
 
-      <section class="page-content">
+      <section class="page-content fiado-page">
         <h1>Fiado</h1>
-        <div class="module-placeholder">
-          <h2>Módulo em desenvolvimento</h2>
-          <p>O módulo de fiado será implementado em uma próxima etapa.</p>
+        <p id="fiadoMessage" class="message" aria-live="polite"></p>
+
+        <div class="fiado-summary-grid" aria-label="Resumo do fiado">
+          <article class="fiado-summary-card">
+            <span class="fiado-icon green" aria-hidden="true">$</span>
+            <div>
+              <span>Saldo total em aberto</span>
+              <strong id="summaryOpenBalance">R$ 0,00</strong>
+            </div>
+          </article>
+          <article class="fiado-summary-card">
+            <span class="fiado-icon red" aria-hidden="true">!</span>
+            <div>
+              <span>Vencido do mês anterior</span>
+              <strong id="summaryOverdue">R$ 0,00</strong>
+            </div>
+          </article>
+          <article class="fiado-summary-card">
+            <span class="fiado-icon blue" aria-hidden="true">R</span>
+            <div>
+              <span>Recebido no mês atual</span>
+              <strong id="summaryReceived">R$ 0,00</strong>
+            </div>
+          </article>
+          <article class="fiado-summary-card">
+            <span class="fiado-icon violet" aria-hidden="true">C</span>
+            <div>
+              <span>Clientes com pendência</span>
+              <strong id="summaryPendingCustomers">0</strong>
+            </div>
+          </article>
+        </div>
+
+        <div class="fiado-top-grid">
+          <section class="fiado-panel" aria-labelledby="customerLookupTitle">
+            <h2 id="customerLookupTitle">Consultar cliente / dívida</h2>
+            <form id="customerSearchForm" class="fiado-search-form">
+              <label for="customerSearch">Buscar por CPF, nome ou código do cliente</label>
+              <div>
+                <input id="customerSearch" type="search" placeholder="Digite CPF, nome ou código" />
+                <button type="submit">Buscar</button>
+              </div>
+            </form>
+            <div id="customerLookupResult" class="customer-lookup-result"></div>
+            <p class="fiado-info">Pagamento parcial: saldo restante será mantido em aberto.</p>
+          </section>
+
+          <section class="fiado-panel" aria-labelledby="paymentTitle">
+            <h2 id="paymentTitle">Registrar recebimento</h2>
+            <form id="paymentForm" class="payment-form">
+              <div class="form-row two-columns">
+                <div>
+                  <label for="paymentCustomer">Cliente</label>
+                  <select id="paymentCustomer" required></select>
+                </div>
+                <div>
+                  <label for="paymentCycle">Ciclo de cobrança</label>
+                  <select id="paymentCycle" required></select>
+                </div>
+              </div>
+
+              <div class="form-row two-columns">
+                <div>
+                  <label for="cycleBalance">Saldo do ciclo</label>
+                  <input id="cycleBalance" type="text" disabled value="R$ 0,00" />
+                </div>
+                <div>
+                  <label for="paymentAmount">Valor recebido</label>
+                  <div class="currency-input">
+                    <span class="currency-prefix" aria-hidden="true">R$</span>
+                    <input id="paymentAmount" type="text" inputmode="numeric" required />
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-row two-columns">
+                <div>
+                  <label for="paymentMethod">Forma de pagamento</label>
+                  <select id="paymentMethod" required>
+                    <option value="DINHEIRO">Dinheiro</option>
+                    <option value="PIX">Pix</option>
+                    <option value="DEBITO">Débito</option>
+                    <option value="CREDITO">Crédito</option>
+                    <option value="OUTROS">Outro</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="paymentNote">Observação</label>
+                  <textarea id="paymentNote" rows="2" placeholder="Opcional"></textarea>
+                </div>
+              </div>
+
+              <p class="fiado-info">Pagamento parcial: saldo restante será levado para o próximo mês.</p>
+
+              <div class="fiado-actions">
+                <button id="paymentSubmitButton" type="submit">Registrar pagamento</button>
+                <button id="paymentHistoryButton" class="secondary-action" type="button">
+                  Ver histórico
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+
+        <div class="fiado-bottom-grid">
+          <section class="fiado-panel" aria-labelledby="pendingCustomersTitle">
+            <h2 id="pendingCustomersTitle">Clientes com pendência</h2>
+            <div class="fiado-table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Cliente</th>
+                    <th scope="col">CPF</th>
+                    <th scope="col">Ciclo mais antigo</th>
+                    <th scope="col">Saldo em aberto</th>
+                    <th scope="col">Situação</th>
+                    <th scope="col">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="pendingCustomersTable">
+                  <tr>
+                    <td colspan="6">Carregando clientes...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="fiado-panel cycle-rules" aria-labelledby="cycleRulesTitle">
+            <h2 id="cycleRulesTitle">Regras do ciclo</h2>
+            <ul>
+              <li>Ao fechar o mês, o saldo pendente continua em aberto.</li>
+              <li>O cliente pode pagar somente parte da dívida.</li>
+              <li>O restante segue para o próximo ciclo até quitação total.</li>
+              <li>Compras do mês atual ficam separadas dos ciclos anteriores.</li>
+            </ul>
+          </section>
         </div>
       </section>
+
+      <dialog id="statementDialog" class="fiado-dialog">
+        <div class="fiado-dialog-content">
+          <div class="dialog-header">
+            <div>
+              <h2 id="statementTitle">Extrato do cliente</h2>
+              <p id="statementSubtitle"></p>
+            </div>
+            <button id="closeStatementButton" class="secondary-action" type="button">Fechar</button>
+          </div>
+          <div id="statementContent" class="statement-content"></div>
+        </div>
+      </dialog>
     </div>
   </div>
   <script type="module" src="../js/appLayout.js"></script>
+  <script type="module" src="../js/fiadoApp.js"></script>
 </body>
 </html>

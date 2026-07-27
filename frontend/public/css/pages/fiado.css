@@ -1,1 +1,408 @@
-/* Credit-account styles belong here; the current page uses shared components only. */
+.fiado-page {
+  width: min(100% - 2rem, 1500px);
+}
+
+.fiado-page > h1 {
+  margin-bottom: var(--space-4);
+}
+
+#fiadoMessage {
+  margin-bottom: var(--space-4);
+}
+
+.fiado-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.fiado-summary-card,
+.fiado-panel {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.fiado-summary-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  min-height: 104px;
+  padding: var(--space-5);
+}
+
+.fiado-summary-card div {
+  min-width: 0;
+}
+
+.fiado-summary-card span:not(.fiado-icon) {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.fiado-summary-card strong {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-text-strong);
+  font-size: 1.45rem;
+  line-height: 1.1;
+}
+
+.fiado-icon {
+  display: grid;
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  font-weight: 800;
+}
+
+.fiado-icon.green {
+  background: var(--color-success-badge);
+  color: var(--color-success-strong);
+}
+
+.fiado-icon.red {
+  background: var(--color-danger-surface);
+  color: var(--color-danger-strong);
+}
+
+.fiado-icon.blue {
+  background: var(--color-info-surface);
+  color: var(--color-primary);
+}
+
+.fiado-icon.violet {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.fiado-top-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.fiado-bottom-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--space-5);
+}
+
+.fiado-panel {
+  padding: var(--space-5);
+}
+
+.fiado-panel h2 {
+  margin-bottom: var(--space-4);
+  font-size: 1.15rem;
+}
+
+.fiado-search-form label,
+.payment-form label {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-sm);
+}
+
+.fiado-search-form > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+}
+
+.fiado-search-form input,
+.fiado-search-form button,
+.payment-form input,
+.payment-form select,
+.payment-form textarea {
+  margin-bottom: 0;
+}
+
+.customer-lookup-result {
+  margin-top: var(--space-4);
+}
+
+.customer-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.customer-avatar {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-info-surface);
+  color: var(--color-primary);
+  font-weight: 800;
+}
+
+.customer-main {
+  min-width: 0;
+}
+
+.customer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.customer-header h3 {
+  margin: 0 0 var(--space-1);
+  font-size: 1rem;
+}
+
+.customer-meta,
+.cycle-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.customer-meta span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.cycle-list {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.cycle-chip {
+  padding: 0.6rem var(--space-3);
+  border: var(--border-width) solid var(--color-info-border);
+  border-radius: var(--radius-control);
+  background: var(--color-info-surface);
+  color: var(--color-info-text);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.fiado-info {
+  margin: var(--space-4) 0 0;
+  padding: 0.75rem var(--space-3);
+  border: var(--border-width) solid var(--color-info-border);
+  border-radius: var(--radius-control);
+  background: var(--color-info-surface);
+  color: var(--color-info-text);
+  font-size: var(--font-size-sm);
+}
+
+.form-row {
+  margin-bottom: var(--space-4);
+}
+
+.two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.fiado-actions,
+.table-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.fiado-actions {
+  margin-top: var(--space-4);
+}
+
+.fiado-table-wrapper {
+  overflow-x: auto;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.fiado-table-wrapper table {
+  min-width: 850px;
+}
+
+.fiado-table-wrapper th,
+.fiado-table-wrapper td {
+  padding: 0.75rem var(--space-3);
+  vertical-align: middle;
+}
+
+.fiado-status {
+  display: inline-flex;
+  min-width: 86px;
+  justify-content: center;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+.fiado-status.em_aberto {
+  background: var(--color-info-surface);
+  color: var(--color-info-text);
+}
+
+.fiado-status.parcial {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.fiado-status.vencido,
+.fiado-status.atrasado {
+  background: var(--color-danger-surface);
+  color: var(--color-danger-strong);
+}
+
+.fiado-status.quitado,
+.fiado-status.em_dia {
+  background: var(--color-success-badge);
+  color: var(--color-success-strong);
+}
+
+.cycle-rules ul {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-help);
+  line-height: 1.55;
+}
+
+.fiado-dialog {
+  width: min(calc(100% - 2rem), 920px);
+  max-height: min(86vh, 760px);
+  padding: 0;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+}
+
+.fiado-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.fiado-dialog-content {
+  display: grid;
+  gap: var(--space-5);
+  max-height: inherit;
+  padding: var(--space-6);
+  overflow: auto;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.dialog-header h2,
+.dialog-header p {
+  margin: 0;
+}
+
+.dialog-header p {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+}
+
+.statement-content {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.statement-section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.statement-section h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.statement-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.statement-item {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+}
+
+.statement-item strong {
+  color: var(--color-text-strong);
+}
+
+.statement-item small {
+  color: var(--color-text-muted);
+}
+
+.statement-value.debit {
+  color: var(--color-danger-strong);
+}
+
+.statement-value.credit {
+  color: var(--color-success-strong);
+}
+
+.empty-state {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-help);
+}
+
+@media (max-width: 1120px) {
+  .fiado-summary-grid,
+  .fiado-top-grid,
+  .fiado-bottom-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .fiado-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .fiado-summary-grid,
+  .fiado-top-grid,
+  .two-columns,
+  .fiado-search-form > div {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-card,
+  .customer-header,
+  .dialog-header {
+    align-items: flex-start;
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .fiado-actions,
+  .fiado-actions button {
+    width: 100%;
+  }
+}
