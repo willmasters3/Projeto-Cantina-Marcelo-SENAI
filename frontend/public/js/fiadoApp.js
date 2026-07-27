@@ -182,7 +182,7 @@ const renderSelectedCustomer = () => {
 };
 
 const populatePaymentCustomers = () => {
-  const currentValue = paymentCustomer.value;
+  const currentValue = selectedCustomer ? String(selectedCustomer.id) : paymentCustomer.value;
   const customers = [...pendingCustomers];
   if (
     selectedCustomer
@@ -193,11 +193,12 @@ const populatePaymentCustomers = () => {
 
   paymentCustomer.replaceChildren();
 
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = customers.length ? 'Selecione um cliente' : 'Nenhum cliente com pendência';
+  paymentCustomer.appendChild(placeholder);
+
   if (!customers.length) {
-    const emptyOption = document.createElement('option');
-    emptyOption.value = '';
-    emptyOption.textContent = 'Nenhum cliente com pendência';
-    paymentCustomer.appendChild(emptyOption);
     return;
   }
 
@@ -208,11 +209,28 @@ const populatePaymentCustomers = () => {
     paymentCustomer.appendChild(option);
   });
 
-  paymentCustomer.value = currentValue || String(selectedCustomer?.id || customers[0].id);
+  paymentCustomer.value = customers.some((customer) => String(customer.id) === String(currentValue))
+    ? currentValue
+    : '';
 };
 
 const populatePaymentCycles = () => {
   paymentCycle.replaceChildren();
+
+  if (!selectedCustomer) {
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = 'Selecione um cliente';
+    paymentCycle.appendChild(option);
+    cycleBalance.value = formatBRLCurrency(0);
+    paymentCycle.disabled = true;
+    paymentSubmitButton.disabled = true;
+    paymentHistoryButton.disabled = true;
+    return;
+  }
+
+  paymentCycle.disabled = false;
+  paymentHistoryButton.disabled = false;
   const cycles = selectedCustomer?.ciclos_abertos || [];
 
   if (!cycles.length) {
@@ -221,8 +239,11 @@ const populatePaymentCycles = () => {
     option.textContent = 'Sem ciclo em aberto';
     paymentCycle.appendChild(option);
     cycleBalance.value = formatBRLCurrency(0);
+    paymentSubmitButton.disabled = true;
     return;
   }
+
+  paymentSubmitButton.disabled = false;
 
   cycles.forEach((cycle) => {
     const option = document.createElement('option');
@@ -406,8 +427,8 @@ const loadPageData = async () => {
     renderSummary(summary);
     renderPendingCustomers(customers);
 
-    if (!selectedCustomer && customers.length) {
-      await setSelectedCustomer(customers[0].id);
+    if (selectedCustomer?.id) {
+      await setSelectedCustomer(selectedCustomer.id);
     } else {
       populatePaymentForm();
     }
@@ -437,6 +458,8 @@ customerSearchForm.addEventListener('submit', async (event) => {
 paymentCustomer.addEventListener('change', async () => {
   if (paymentCustomer.value) {
     await setSelectedCustomer(paymentCustomer.value);
+  } else {
+    await setSelectedCustomer(null);
   }
 });
 
@@ -490,7 +513,9 @@ paymentForm.addEventListener('submit', async (event) => {
     submittingConfirmedExtraCredit = false;
     showMessage(error.message, true);
   } finally {
-    if (!submittingConfirmedExtraCredit) paymentSubmitButton.disabled = false;
+    if (!submittingConfirmedExtraCredit) {
+      paymentSubmitButton.disabled = !selectedCustomer?.ciclos_abertos?.length;
+    }
   }
 });
 

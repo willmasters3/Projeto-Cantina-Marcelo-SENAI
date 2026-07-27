@@ -11,13 +11,19 @@ const summaryProducts = document.getElementById('summaryProducts');
 const summaryInStock = document.getElementById('summaryInStock');
 const summaryLowStock = document.getElementById('summaryLowStock');
 const summaryStockValue = document.getElementById('summaryStockValue');
+const stockSummaryCards = document.querySelectorAll('[data-summary-card]');
 const stockFilters = document.getElementById('stockFilters');
 const stockSearch = document.getElementById('stockSearch');
 const stockCategoryFilter = document.getElementById('stockCategoryFilter');
 const stockSupplierFilter = document.getElementById('stockSupplierFilter');
 const stockStatusFilter = document.getElementById('stockStatusFilter');
 const stockProductsTable = document.getElementById('stockProductsTable');
+const stockPaginationInfo = document.getElementById('stockPaginationInfo');
+const stockPaginationButtons = document.getElementById('stockPaginationButtons');
 const stockMovementsList = document.getElementById('stockMovementsList');
+const movementPrevButton = document.getElementById('movementPrevButton');
+const movementPaginationInfo = document.getElementById('movementPaginationInfo');
+const movementNextButton = document.getElementById('movementNextButton');
 const lowStockList = document.getElementById('lowStockList');
 const suppliersList = document.getElementById('suppliersList');
 const openEntryButton = document.getElementById('openEntryButton');
@@ -67,11 +73,22 @@ const originLabels = new Map([
   ['ENTRADA_INICIAL', 'Entrada inicial'],
   ['ENTRADA_ESTOQUE', 'Entrada']
 ]);
+const summaryCardByStatus = new Map([
+  ['ALL', 'ALL'],
+  ['IN_STOCK', 'IN_STOCK'],
+  ['LOW_STOCK', 'LOW_STOCK']
+]);
+const PRODUCT_PAGE_SIZE = 10;
+const MOVEMENT_PAGE_SIZE = 4;
 
 let categories = [];
 let activeSuppliers = [];
 let selectableProducts = [];
 let searchTimer = null;
+let productPage = 1;
+let movementPage = 1;
+let movementTotalPages = 1;
+let activeSummaryCard = 'ALL';
 
 bindCurrencyInput(entryCost);
 
@@ -106,6 +123,54 @@ const clearCurrencyInput = (input) => {
   input.dataset.currencyDigits = '';
 };
 
+const normalizeListResponse = (response, fallbackPage, fallbackPageSize) => {
+  if (Array.isArray(response)) {
+    return {
+      items: response,
+      pagination: {
+        page: fallbackPage,
+        pageSize: fallbackPageSize,
+        totalItems: response.length,
+        totalPages: Math.max(1, Math.ceil(response.length / fallbackPageSize))
+      }
+    };
+  }
+
+  return {
+    items: response?.items || [],
+    pagination: {
+      page: Number(response?.pagination?.page || fallbackPage),
+      pageSize: Number(response?.pagination?.pageSize || fallbackPageSize),
+      totalItems: Number(response?.pagination?.totalItems || 0),
+      totalPages: Math.max(1, Number(response?.pagination?.totalPages || 1))
+    }
+  };
+};
+
+const setActiveSummaryCard = (cardKey) => {
+  activeSummaryCard = cardKey;
+  stockSummaryCards.forEach((card) => {
+    const isActive = card.dataset.summaryCard === activeSummaryCard;
+    card.classList.toggle('active', isActive);
+    card.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+};
+
+const syncSummaryCardWithStatus = () => {
+  setActiveSummaryCard(summaryCardByStatus.get(stockStatusFilter.value) || '');
+};
+
+const createPaginationButton = ({ label, page, active = false, disabled = false }) => {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `secondary-action compact-button pagination-button${active ? ' active' : ''}`;
+  button.textContent = label;
+  button.dataset.page = String(page);
+  button.disabled = disabled;
+  if (active) button.setAttribute('aria-current', 'page');
+  return button;
+};
+
 const formatDateTime = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '—';
@@ -124,7 +189,8 @@ const getFilters = () => ({
   category_id: stockCategoryFilter.value,
   supplier_id: stockSupplierFilter.value,
   status: stockStatusFilter.value,
-  limit: 200
+  page: productPage,
+  pageSize: PRODUCT_PAGE_SIZE
 });
 
 const populateCategories = () => {
@@ -212,7 +278,7 @@ const renderProducts = (products) => {
   if (!products.length) {
     const row = document.createElement('tr');
     const cell = document.createElement('td');
-    cell.colSpan = 11;
+    cell.colSpan = 10;
     cell.textContent = 'Nenhum produto encontrado.';
     row.appendChild(cell);
     stockProductsTable.appendChild(row);
@@ -221,15 +287,14 @@ const renderProducts = (products) => {
 
   products.forEach((product) => {
     const row = document.createElement('tr');
+    const status = getProductStatus(product);
 
-    const imageCell = document.createElement('td');
     const image = document.createElement('img');
     image.className = 'stock-product-image';
     image.src = product.imagem_url || productPlaceholderUrl;
     image.alt = `Imagem de ${product.nome}`;
     image.loading = 'lazy';
     image.addEventListener('error', useProductPlaceholder);
-    imageCell.appendChild(image);
 
     const productCell = document.createElement('td');
     const productDetails = document.createElement('div');
@@ -240,10 +305,9 @@ const renderProducts = (products) => {
     const productCode = document.createElement('small');
     productCode.textContent = `Código interno: ${product.id}`;
     productText.append(productName, productCode);
-    productDetails.appendChild(productText);
+    productDetails.append(image, productText);
     productCell.appendChild(productDetails);
 
-    const status = getProductStatus(product);
     const statusCell = document.createElement('td');
     const statusBadge = document.createElement('span');
     statusBadge.className = `stock-status ${status.className}`;
@@ -259,12 +323,11 @@ const renderProducts = (products) => {
     actionCell.appendChild(adjustButton);
 
     row.append(
-      imageCell,
       productCell,
       createCell(product.codigo_barras || 'Não informado'),
       createCell(product.categoria || 'Sem categoria'),
       createCell(product.fornecedor || 'Sem fornecedor'),
-      createCell(formatQuantity(product.estoque_atual), 'numeric-cell'),
+      createCell(formatQuantity(product.estoque_atual), `numeric-cell stock-level ${status.className}`),
       createCell(formatQuantity(product.estoque_minimo), 'numeric-cell'),
       createCell(formatBRLCurrency(product.custo || 0), 'numeric-cell'),
       createCell(formatBRLCurrency(product.preco_venda || 0), 'numeric-cell'),
@@ -273,6 +336,41 @@ const renderProducts = (products) => {
     );
     stockProductsTable.appendChild(row);
   });
+};
+
+const renderProductPagination = (pagination) => {
+  const page = Number(pagination.page || 1);
+  const pageSize = Number(pagination.pageSize || PRODUCT_PAGE_SIZE);
+  const totalItems = Number(pagination.totalItems || 0);
+  const totalPages = Math.max(1, Number(pagination.totalPages || 1));
+  const firstItem = totalItems ? ((page - 1) * pageSize) + 1 : 0;
+  const lastItem = Math.min(page * pageSize, totalItems);
+
+  stockPaginationInfo.textContent = `Mostrando ${firstItem} a ${lastItem} de ${totalItems} produtos`;
+  stockPaginationButtons.replaceChildren();
+
+  stockPaginationButtons.appendChild(createPaginationButton({
+    label: 'Anterior',
+    page: Math.max(1, page - 1),
+    disabled: page <= 1
+  }));
+
+  const startPage = Math.max(1, Math.min(page - 2, totalPages - 4));
+  const endPage = Math.min(totalPages, startPage + 4);
+
+  for (let nextPage = startPage; nextPage <= endPage; nextPage += 1) {
+    stockPaginationButtons.appendChild(createPaginationButton({
+      label: String(nextPage),
+      page: nextPage,
+      active: nextPage === page
+    }));
+  }
+
+  stockPaginationButtons.appendChild(createPaginationButton({
+    label: 'Próxima',
+    page: Math.min(totalPages, page + 1),
+    disabled: page >= totalPages
+  }));
 };
 
 const renderMovements = (movements) => {
@@ -292,12 +390,12 @@ const renderMovements = (movements) => {
     product.className = 'movement-product';
     const productName = document.createElement('strong');
     productName.textContent = movement.produto || 'Produto não encontrado';
+    const isEntry = movement.natureza === 'ENTRADA';
     const meta = document.createElement('small');
-    meta.textContent = `${originLabels.get(movement.origem) || movement.origem} · ${formatDateTime(movement.criado_em)}`;
+    meta.textContent = `${isEntry ? 'Entrada' : 'Saída'} · ${originLabels.get(movement.origem) || movement.origem} · ${formatDateTime(movement.criado_em)}`;
     product.append(productName, meta);
 
     const quantity = document.createElement('span');
-    const isEntry = movement.natureza === 'ENTRADA';
     quantity.className = `movement-quantity ${isEntry ? 'entry' : 'exit'}`;
     quantity.textContent = `${isEntry ? '+' : '-'} ${formatQuantity(movement.quantidade)}`;
     heading.append(product, quantity);
@@ -322,6 +420,16 @@ const renderMovements = (movements) => {
     }
     stockMovementsList.appendChild(item);
   });
+};
+
+const renderMovementPagination = (pagination) => {
+  const page = Number(pagination.page || 1);
+  const totalPages = Math.max(1, Number(pagination.totalPages || 1));
+  movementPage = page;
+  movementTotalPages = totalPages;
+  movementPaginationInfo.textContent = `Página ${page} de ${totalPages}`;
+  movementPrevButton.disabled = page <= 1;
+  movementNextButton.disabled = page >= totalPages;
 };
 
 const renderLowStock = (products) => {
@@ -440,29 +548,49 @@ async function refreshStockData() {
   try {
     const [
       summary,
-      products,
-      movements,
+      productsResponse,
+      movementsResponse,
       lowStockProducts,
       suppliers,
-      allProducts
+      allProductsResponse
     ] = await Promise.all([
       stockApi.getSummary(),
       stockApi.listStockProducts(getFilters()),
-      stockApi.listMovements(20),
-      stockApi.listLowStock(8),
+      stockApi.listMovements({ page: movementPage, pageSize: MOVEMENT_PAGE_SIZE }),
+      stockApi.listLowStock(4),
       stockApi.listSuppliers({ activeOnly: true }),
-      stockApi.listStockProducts({ status: 'all', limit: 500 })
+      stockApi.listStockProducts({ status: 'ALL', page: 1, pageSize: 500 })
     ]);
 
+    const productsData = normalizeListResponse(productsResponse, productPage, PRODUCT_PAGE_SIZE);
+    const movementsData = normalizeListResponse(movementsResponse, movementPage, MOVEMENT_PAGE_SIZE);
+    const allProductsData = normalizeListResponse(allProductsResponse, 1, 500);
+
     activeSuppliers = suppliers;
-    selectableProducts = allProducts;
+    selectableProducts = allProductsData.items;
     renderSummary(summary);
-    renderProducts(products);
-    renderMovements(movements);
+    renderProducts(productsData.items);
+    renderProductPagination(productsData.pagination);
+    renderMovements(movementsData.items);
+    renderMovementPagination(movementsData.pagination);
     renderLowStock(lowStockProducts);
     renderSuppliers(suppliers);
     populateSupplierSelects();
     populateProductSelect();
+  } catch (error) {
+    showMessage(error.message, true);
+  }
+}
+
+async function refreshMovementsData() {
+  try {
+    const movementsResponse = await stockApi.listMovements({
+      page: movementPage,
+      pageSize: MOVEMENT_PAGE_SIZE
+    });
+    const movementsData = normalizeListResponse(movementsResponse, movementPage, MOVEMENT_PAGE_SIZE);
+    renderMovements(movementsData.items);
+    renderMovementPagination(movementsData.pagination);
   } catch (error) {
     showMessage(error.message, true);
   }
@@ -573,20 +701,57 @@ supplierForm.addEventListener('submit', async (event) => {
 
 stockFilters.addEventListener('submit', async (event) => {
   event.preventDefault();
+  productPage = 1;
+  syncSummaryCardWithStatus();
   await refreshStockData();
 });
 
 stockSearch.addEventListener('input', () => {
   window.clearTimeout(searchTimer);
+  productPage = 1;
   searchTimer = window.setTimeout(refreshStockData, 250);
 });
 
 [stockCategoryFilter, stockSupplierFilter, stockStatusFilter].forEach((select) => {
-  select.addEventListener('change', refreshStockData);
+  select.addEventListener('change', async () => {
+    productPage = 1;
+    if (select === stockStatusFilter) syncSummaryCardWithStatus();
+    await refreshStockData();
+  });
 });
 
 stockFilters.addEventListener('reset', () => {
-  window.setTimeout(refreshStockData, 0);
+  window.setTimeout(async () => {
+    productPage = 1;
+    setActiveSummaryCard('ALL');
+    await refreshStockData();
+  }, 0);
+});
+
+stockSummaryCards.forEach((card) => {
+  card.addEventListener('click', async () => {
+    productPage = 1;
+    stockStatusFilter.value = card.dataset.stockStatus || 'ALL';
+    setActiveSummaryCard(card.dataset.summaryCard || '');
+    await refreshStockData();
+  });
+});
+
+stockPaginationButtons.addEventListener('click', async (event) => {
+  const button = event.target.closest('button[data-page]');
+  if (!button || button.disabled) return;
+  productPage = Number(button.dataset.page || 1);
+  await refreshStockData();
+});
+
+movementPrevButton.addEventListener('click', async () => {
+  movementPage = Math.max(1, movementPage - 1);
+  await refreshMovementsData();
+});
+
+movementNextButton.addEventListener('click', async () => {
+  movementPage = Math.min(movementTotalPages, movementPage + 1);
+  await refreshMovementsData();
 });
 
 openEntryButton.addEventListener('click', openEntryDialog);

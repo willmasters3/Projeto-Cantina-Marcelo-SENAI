@@ -16,6 +16,8 @@ const listProducts = async (req, res, next) => {
       categoryId: req.query.category_id,
       supplierId: req.query.supplier_id,
       status: req.query.status,
+      page: req.query.page,
+      pageSize: req.query.pageSize,
       limit: req.query.limit
     });
     res.status(200).json({ data: products });
@@ -26,7 +28,11 @@ const listProducts = async (req, res, next) => {
 
 const listMovements = async (req, res, next) => {
   try {
-    const movements = await stockService.listMovements({ limit: req.query.limit });
+    const movements = await stockService.listMovements({
+      page: req.query.page,
+      pageSize: req.query.pageSize,
+      limit: req.query.limit
+    });
     res.status(200).json({ data: movements });
   } catch (error) {
     next(error);

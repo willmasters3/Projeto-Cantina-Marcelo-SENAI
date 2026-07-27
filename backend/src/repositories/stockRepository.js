@@ -39,7 +39,9 @@ const findProducts = async ({
   categoryId = null,
   supplierId = null,
   status = 'all',
-  limit = 200
+  page = 1,
+  pageSize = 10,
+  offset = 0
 } = {}) => {
   const params = [];
   const conditions = ['p.ativo = 1'];
@@ -85,7 +87,9 @@ const findProducts = async ({
     params.push(supplierId);
   }
 
-  if (status === 'ok') {
+  if (status === 'in_stock') {
+    conditions.push('p.estoque_atual > 0');
+  } else if (status === 'ok') {
     conditions.push('p.estoque_atual > p.estoque_minimo');
   } else if (status === 'low') {
     conditions.push('p.estoque_atual > 0 AND p.estoque_atual <= p.estoque_minimo');
@@ -93,12 +97,27 @@ const findProducts = async ({
     conditions.push('p.estoque_atual <= 0');
   }
 
-  query += ` WHERE ${conditions.join(' AND ')}`;
-  query += ' ORDER BY p.nome ASC LIMIT ?';
-  params.push(limit);
+  const whereClause = ` WHERE ${conditions.join(' AND ')}`;
+  const [countRows] = await pool.query(
+    `SELECT COUNT(*) AS totalItems
+     FROM products p${whereClause}`,
+    params
+  );
+  const totalItems = Number(countRows[0]?.totalItems || 0);
 
-  const [rows] = await pool.query(query, params);
-  return rows;
+  query += whereClause;
+  query += ' ORDER BY p.nome ASC, p.id ASC LIMIT ? OFFSET ?';
+
+  const [rows] = await pool.query(query, [...params, pageSize, offset]);
+  return {
+    items: rows,
+    pagination: {
+      page,
+      pageSize,
+      totalItems,
+      totalPages: Math.max(1, Math.ceil(totalItems / pageSize))
+    }
+  };
 };
 
 const findLowStockProducts = async (limit = 8) => {
@@ -124,7 +143,9 @@ const findLowStockProducts = async (limit = 8) => {
   return rows;
 };
 
-const findMovements = async (limit = 20) => {
+const findMovements = async ({ page = 1, pageSize = 4, offset = 0 } = {}) => {
+  const [countRows] = await pool.query('SELECT COUNT(*) AS totalItems FROM stock_movements');
+  const totalItems = Number(countRows[0]?.totalItems || 0);
   const [rows] = await pool.query(
     `SELECT
        sm.id,
@@ -149,10 +170,18 @@ const findMovements = async (limit = 20) => {
      LEFT JOIN suppliers s ON s.id = sm.supplier_id
      LEFT JOIN users u ON u.id = sm.usuario_id
      ORDER BY sm.criado_em DESC, sm.id DESC
-     LIMIT ?`,
-    [limit]
+     LIMIT ? OFFSET ?`,
+    [pageSize, offset]
   );
-  return rows;
+  return {
+    items: rows,
+    pagination: {
+      page,
+      pageSize,
+      totalItems,
+      totalPages: Math.max(1, Math.ceil(totalItems / pageSize))
+    }
+  };
 };
 
 const lockProductById = async (id, executor) => {

@@ -36,9 +36,10 @@ const getSummary = async () => request('/stock/summary');
 const listStockProducts = async (filters = {}) => request(
   `/stock/products${toQueryString(filters)}`
 );
-const listMovements = async (limit = 20) => request(
-  `/stock/movements${toQueryString({ limit })}`
-);
+const listMovements = async (params = {}) => {
+  const queryParams = typeof params === 'number' ? { limit: params } : params;
+  return request(`/stock/movements${toQueryString(queryParams)}`);
+};
 const listLowStock = async (limit = 8) => request(
   `/stock/low-stock${toQueryString({ limit })}`
 );

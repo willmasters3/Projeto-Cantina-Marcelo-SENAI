@@ -34,38 +34,62 @@
         <p id="stockMessage" class="message" aria-live="polite"></p>
 
         <div class="stock-summary-grid" aria-label="Resumo do estoque">
-          <article class="stock-summary-card">
+          <button
+            type="button"
+            class="stock-summary-card active"
+            data-summary-card="ALL"
+            data-stock-status="ALL"
+            aria-pressed="true"
+          >
             <span class="summary-icon blue" aria-hidden="true">P</span>
             <div>
               <span>Produtos cadastrados</span>
               <strong id="summaryProducts">0</strong>
               <small>Total de produtos ativos</small>
             </div>
-          </article>
-          <article class="stock-summary-card">
+          </button>
+          <button
+            type="button"
+            class="stock-summary-card"
+            data-summary-card="IN_STOCK"
+            data-stock-status="IN_STOCK"
+            aria-pressed="false"
+          >
             <span class="summary-icon green" aria-hidden="true">E</span>
             <div>
               <span>Em estoque</span>
               <strong id="summaryInStock">0</strong>
               <small>Itens disponíveis</small>
             </div>
-          </article>
-          <article class="stock-summary-card">
+          </button>
+          <button
+            type="button"
+            class="stock-summary-card"
+            data-summary-card="LOW_STOCK"
+            data-stock-status="LOW_STOCK"
+            aria-pressed="false"
+          >
             <span class="summary-icon orange" aria-hidden="true">B</span>
             <div>
               <span>Baixo estoque</span>
               <strong id="summaryLowStock">0</strong>
               <small>Requer atenção</small>
             </div>
-          </article>
-          <article class="stock-summary-card">
+          </button>
+          <button
+            type="button"
+            class="stock-summary-card"
+            data-summary-card="STOCK_VALUE"
+            data-stock-status="IN_STOCK"
+            aria-pressed="false"
+          >
             <span class="summary-icon violet" aria-hidden="true">$</span>
             <div>
               <span>Valor estimado do estoque</span>
               <strong id="summaryStockValue">R$ 0,00</strong>
               <small>Custo total dos itens</small>
             </div>
-          </article>
+          </button>
         </div>
 
         <div class="stock-workspace">
@@ -94,10 +118,11 @@
                 <option value="">Todos os fornecedores</option>
               </select>
               <select id="stockStatusFilter" aria-label="Status do estoque">
-                <option value="all">Todos os status</option>
-                <option value="ok">OK</option>
-                <option value="low">Baixo</option>
-                <option value="out">Sem estoque</option>
+                <option value="ALL">Todos os status</option>
+                <option value="IN_STOCK">Em estoque</option>
+                <option value="LOW_STOCK">Baixo estoque</option>
+                <option value="OUT_OF_STOCK">Sem estoque</option>
+                <option value="OK">OK</option>
               </select>
               <button class="secondary-action" type="reset">Limpar filtros</button>
             </form>
@@ -106,7 +131,6 @@
               <table>
                 <thead>
                   <tr>
-                    <th scope="col">Imagem</th>
                     <th scope="col">Produto</th>
                     <th scope="col">Código de barras</th>
                     <th scope="col">Categoria</th>
@@ -121,10 +145,14 @@
                 </thead>
                 <tbody id="stockProductsTable">
                   <tr>
-                    <td colspan="11">Carregando produtos...</td>
+                    <td colspan="10">Carregando produtos...</td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+            <div class="stock-pagination" aria-label="Paginação de produtos">
+              <span id="stockPaginationInfo">Mostrando 0 a 0 de 0 produtos</span>
+              <div id="stockPaginationButtons" class="pagination-buttons"></div>
             </div>
           </section>
 
@@ -134,6 +162,15 @@
                 <h2 id="movementsTitle">Últimas movimentações</h2>
               </div>
               <div id="stockMovementsList" class="movement-list"></div>
+              <div class="movement-pagination" aria-label="Paginação de movimentações">
+                <button id="movementPrevButton" class="secondary-action compact-button" type="button">
+                  Anterior
+                </button>
+                <span id="movementPaginationInfo">Página 1 de 1</span>
+                <button id="movementNextButton" class="secondary-action compact-button" type="button">
+                  Próxima
+                </button>
+              </div>
             </section>
 
             <section class="stock-panel compact-panel" aria-labelledby="lowStockTitle">

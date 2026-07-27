@@ -59,8 +59,17 @@ const normalizeOptionalText = (value, maxLength = 500) => {
 };
 
 const normalizeStatusFilter = (value) => {
-  const normalized = String(value ?? 'all').trim().toLowerCase();
-  if (['all', 'ok', 'low', 'out'].includes(normalized)) return normalized;
+  const normalized = String(value ?? 'ALL').trim().toUpperCase();
+  const aliases = new Map([
+    ['ALL', 'all'],
+    ['IN_STOCK', 'in_stock'],
+    ['OK', 'ok'],
+    ['LOW', 'low'],
+    ['LOW_STOCK', 'low'],
+    ['OUT', 'out'],
+    ['OUT_OF_STOCK', 'out']
+  ]);
+  if (aliases.has(normalized)) return aliases.get(normalized);
   throw new HttpError(400, 'Status de estoque inválido');
 };
 
@@ -70,6 +79,8 @@ const normalizeLimit = (value, fallback, max) => {
   return Math.min(Math.max(Math.trunc(normalized), 1), max);
 };
 
+const normalizePage = (value) => normalizeLimit(value, 1, 100000);
+
 const formatMovementReason = (type, reason) => {
   const typeLabel = adjustmentTypes.get(type);
   return typeLabel ? `${typeLabel}: ${reason}` : reason;
@@ -77,17 +88,29 @@ const formatMovementReason = (type, reason) => {
 
 const listSummary = async () => stockRepository.getSummary();
 
-const listProducts = async (filters = {}) => stockRepository.findProducts({
-  search: String(filters.search ?? '').trim(),
-  categoryId: normalizeOptionalId(filters.categoryId, 'Categoria'),
-  supplierId: normalizeOptionalId(filters.supplierId, 'Fornecedor'),
-  status: normalizeStatusFilter(filters.status),
-  limit: normalizeLimit(filters.limit, 200, 500)
-});
+const listProducts = async (filters = {}) => {
+  const page = normalizePage(filters.page);
+  const pageSize = normalizeLimit(filters.pageSize ?? filters.limit, 10, 500);
+  return stockRepository.findProducts({
+    search: String(filters.search ?? '').trim(),
+    categoryId: normalizeOptionalId(filters.categoryId, 'Categoria'),
+    supplierId: normalizeOptionalId(filters.supplierId, 'Fornecedor'),
+    status: normalizeStatusFilter(filters.status),
+    page,
+    pageSize,
+    offset: (page - 1) * pageSize
+  });
+};
 
-const listMovements = async ({ limit } = {}) => (
-  stockRepository.findMovements(normalizeLimit(limit, 20, 100))
-);
+const listMovements = async ({ page: pageValue, pageSize: pageSizeValue, limit } = {}) => {
+  const page = normalizePage(pageValue);
+  const pageSize = normalizeLimit(pageSizeValue ?? limit, 4, 20);
+  return stockRepository.findMovements({
+    page,
+    pageSize,
+    offset: (page - 1) * pageSize
+  });
+};
 
 const listLowStockProducts = async ({ limit } = {}) => (
   stockRepository.findLowStockProducts(normalizeLimit(limit, 8, 50))
