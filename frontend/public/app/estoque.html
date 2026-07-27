@@ -29,15 +29,246 @@
         <button id="logoutButton">Sair</button>
       </header>
 
-      <section class="page-content">
+      <section class="page-content stock-page">
         <h1>Estoque</h1>
-        <div class="module-placeholder">
-          <h2>Módulo em desenvolvimento</h2>
-          <p>O controle de estoque será implementado em uma próxima etapa.</p>
+        <p id="stockMessage" class="message" aria-live="polite"></p>
+
+        <div class="stock-summary-grid" aria-label="Resumo do estoque">
+          <article class="stock-summary-card">
+            <span class="summary-icon blue" aria-hidden="true">P</span>
+            <div>
+              <span>Produtos cadastrados</span>
+              <strong id="summaryProducts">0</strong>
+              <small>Total de produtos ativos</small>
+            </div>
+          </article>
+          <article class="stock-summary-card">
+            <span class="summary-icon green" aria-hidden="true">E</span>
+            <div>
+              <span>Em estoque</span>
+              <strong id="summaryInStock">0</strong>
+              <small>Itens disponíveis</small>
+            </div>
+          </article>
+          <article class="stock-summary-card">
+            <span class="summary-icon orange" aria-hidden="true">B</span>
+            <div>
+              <span>Baixo estoque</span>
+              <strong id="summaryLowStock">0</strong>
+              <small>Requer atenção</small>
+            </div>
+          </article>
+          <article class="stock-summary-card">
+            <span class="summary-icon violet" aria-hidden="true">$</span>
+            <div>
+              <span>Valor estimado do estoque</span>
+              <strong id="summaryStockValue">R$ 0,00</strong>
+              <small>Custo total dos itens</small>
+            </div>
+          </article>
+        </div>
+
+        <div class="stock-workspace">
+          <section class="stock-panel inventory-panel" aria-labelledby="stockTableTitle">
+            <div class="stock-panel-header">
+              <h2 id="stockTableTitle">Controle de estoque</h2>
+              <div class="stock-header-actions">
+                <button id="openEntryButton" type="button">Nova entrada</button>
+                <button id="openSupplierButton" class="secondary-action" type="button">
+                  Novo fornecedor
+                </button>
+              </div>
+            </div>
+
+            <form id="stockFilters" class="stock-filters">
+              <input
+                id="stockSearch"
+                type="search"
+                placeholder="Buscar por nome, código ou código de barras"
+                autocomplete="off"
+              />
+              <select id="stockCategoryFilter" aria-label="Categoria">
+                <option value="">Todas as categorias</option>
+              </select>
+              <select id="stockSupplierFilter" aria-label="Fornecedor">
+                <option value="">Todos os fornecedores</option>
+              </select>
+              <select id="stockStatusFilter" aria-label="Status do estoque">
+                <option value="all">Todos os status</option>
+                <option value="ok">OK</option>
+                <option value="low">Baixo</option>
+                <option value="out">Sem estoque</option>
+              </select>
+              <button class="secondary-action" type="reset">Limpar filtros</button>
+            </form>
+
+            <div class="stock-table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Imagem</th>
+                    <th scope="col">Produto</th>
+                    <th scope="col">Código de barras</th>
+                    <th scope="col">Categoria</th>
+                    <th scope="col">Fornecedor</th>
+                    <th scope="col">Estoque atual</th>
+                    <th scope="col">Estoque mínimo</th>
+                    <th scope="col">Custo</th>
+                    <th scope="col">Preço</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="stockProductsTable">
+                  <tr>
+                    <td colspan="11">Carregando produtos...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <aside class="stock-sidebar" aria-label="Informações auxiliares de estoque">
+            <section class="stock-panel compact-panel" aria-labelledby="movementsTitle">
+              <div class="stock-panel-header compact">
+                <h2 id="movementsTitle">Últimas movimentações</h2>
+              </div>
+              <div id="stockMovementsList" class="movement-list"></div>
+            </section>
+
+            <section class="stock-panel compact-panel" aria-labelledby="lowStockTitle">
+              <div class="stock-panel-header compact">
+                <h2 id="lowStockTitle">Produtos com estoque baixo</h2>
+              </div>
+              <div id="lowStockList" class="mini-product-list"></div>
+            </section>
+
+            <section class="stock-panel compact-panel" aria-labelledby="suppliersTitle">
+              <div class="stock-panel-header compact">
+                <h2 id="suppliersTitle">Fornecedores</h2>
+              </div>
+              <div id="suppliersList" class="supplier-list"></div>
+            </section>
+          </aside>
         </div>
       </section>
+
+      <dialog id="entryDialog" class="stock-dialog">
+        <form id="entryForm" method="dialog" class="stock-dialog-content">
+          <div class="dialog-header">
+            <h2>Nova entrada</h2>
+            <button class="icon-close-button" type="button" data-close-dialog="entryDialog">
+              Fechar
+            </button>
+          </div>
+
+          <label for="entryProduct">Produto</label>
+          <select id="entryProduct" required></select>
+
+          <label for="entryQuantity">Quantidade</label>
+          <input id="entryQuantity" type="number" min="0.0001" step="0.0001" required />
+
+          <label for="entrySupplier">Fornecedor</label>
+          <select id="entrySupplier">
+            <option value="">Sem fornecedor</option>
+          </select>
+
+          <label for="entryCost">Custo unitário</label>
+          <div class="currency-input">
+            <span class="currency-prefix" aria-hidden="true">R$</span>
+            <input id="entryCost" type="text" inputmode="numeric" autocomplete="off" />
+          </div>
+
+          <label for="entryReason">Motivo/observação</label>
+          <textarea id="entryReason" rows="3"></textarea>
+
+          <div class="dialog-actions">
+            <button class="secondary-action" type="button" data-close-dialog="entryDialog">
+              Cancelar
+            </button>
+            <button id="entrySubmitButton" type="submit">Confirmar entrada</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="adjustmentDialog" class="stock-dialog">
+        <form id="adjustmentForm" method="dialog" class="stock-dialog-content">
+          <div class="dialog-header">
+            <div>
+              <h2 id="adjustmentTitle">Ajustar estoque</h2>
+              <p id="adjustmentCurrentStock"></p>
+            </div>
+            <button class="icon-close-button" type="button" data-close-dialog="adjustmentDialog">
+              Fechar
+            </button>
+          </div>
+
+          <input id="adjustmentProductId" type="hidden" />
+
+          <label for="adjustmentFinalStock">Novo estoque final</label>
+          <input id="adjustmentFinalStock" type="number" min="0" step="0.0001" required />
+
+          <label for="adjustmentType">Tipo de ajuste</label>
+          <select id="adjustmentType" required>
+            <option value="perda">Perda</option>
+            <option value="vencimento">Vencimento</option>
+            <option value="consumo_interno">Consumo interno</option>
+            <option value="erro_contagem">Erro de contagem</option>
+            <option value="correcao">Correção</option>
+          </select>
+
+          <label for="adjustmentReason">Motivo</label>
+          <textarea id="adjustmentReason" rows="3" required></textarea>
+
+          <div class="dialog-actions">
+            <button class="secondary-action" type="button" data-close-dialog="adjustmentDialog">
+              Cancelar
+            </button>
+            <button id="adjustmentSubmitButton" type="submit">Confirmar ajuste</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="supplierDialog" class="stock-dialog">
+        <form id="supplierForm" method="dialog" class="stock-dialog-content">
+          <div class="dialog-header">
+            <h2 id="supplierDialogTitle">Novo fornecedor</h2>
+            <button class="icon-close-button" type="button" data-close-dialog="supplierDialog">
+              Fechar
+            </button>
+          </div>
+
+          <input id="supplierId" type="hidden" />
+
+          <label for="supplierName">Nome</label>
+          <input id="supplierName" type="text" autocomplete="off" required />
+
+          <label for="supplierTradingName">Nome fantasia</label>
+          <input id="supplierTradingName" type="text" autocomplete="off" />
+
+          <label for="supplierDocument">Documento</label>
+          <input id="supplierDocument" type="text" autocomplete="off" />
+
+          <label for="supplierPhone">Telefone</label>
+          <input id="supplierPhone" type="text" autocomplete="off" />
+
+          <label for="supplierEmail">E-mail</label>
+          <input id="supplierEmail" type="email" autocomplete="off" />
+
+          <label for="supplierNotes">Observações</label>
+          <textarea id="supplierNotes" rows="3"></textarea>
+
+          <div class="dialog-actions">
+            <button class="secondary-action" type="button" data-close-dialog="supplierDialog">
+              Cancelar
+            </button>
+            <button id="supplierSubmitButton" type="submit">Salvar fornecedor</button>
+          </div>
+        </form>
+      </dialog>
     </div>
   </div>
   <script type="module" src="../js/appLayout.js"></script>
+  <script type="module" src="../js/stockApp.js"></script>
 </body>
 </html>
