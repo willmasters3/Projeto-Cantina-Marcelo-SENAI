@@ -1,6 +1,32 @@
 import productsRepository from '../repositories/productsRepository.js';
 import categoriesRepository from '../repositories/categoriesRepository.js';
+import authConfig from '../config/auth.js';
+import { parseFixedDecimal } from '../utils/fixedDecimal.js';
 import HttpError from '../utils/httpError.js';
+
+const PRODUCT_HAS_HISTORY_MESSAGE = 'Este produto já possui histórico no sistema e não pode ser excluído. Ele pode ser inativado para não aparecer nas vendas.';
+const PRODUCT_HAS_STOCK_MESSAGE = 'Este produto possui estoque atual. Para evitar perda de controle, ajuste ou zere o estoque antes de excluir/inativar.';
+
+const normalizeProductId = (value) => {
+  const normalized = String(value ?? '').trim();
+  if (!/^[1-9]\d*$/.test(normalized)) {
+    throw new HttpError(400, 'Produto inválido');
+  }
+  return normalized;
+};
+
+const normalizeProductStatusFilter = (value) => {
+  const normalized = String(value ?? 'active').trim().toLowerCase();
+  if (['active', 'inactive', 'all'].includes(normalized)) return normalized;
+  throw new HttpError(400, 'Filtro de status de produto inválido');
+};
+
+const normalizeBoolean = (value, fieldName) => {
+  if (typeof value === 'boolean') return value;
+  if (value === 1 || value === '1' || value === 'true') return true;
+  if (value === 0 || value === '0' || value === 'false') return false;
+  throw new HttpError(400, `${fieldName} deve ser booleano`);
+};
 
 const validateCategory = async (categoria_id) => {
   if (categoria_id === null || categoria_id === undefined) {
@@ -13,8 +39,13 @@ const validateCategory = async (categoria_id) => {
   }
 };
 
-const listProducts = async ({ search, barcode, categoryId }) => {
-  return productsRepository.findAll({ activeOnly: true, search, barcode, categoryId });
+const listProducts = async ({ search, barcode, categoryId, status }) => {
+  return productsRepository.findAll({
+    status: normalizeProductStatusFilter(status),
+    search,
+    barcode,
+    categoryId
+  });
 };
 
 const getProductById = async (id) => {
@@ -121,16 +152,63 @@ const updateProduct = async (id, payload) => {
 };
 
 const updateProductStatus = async (id, ativo) => {
-  const currentProduct = await productsRepository.findById(id);
+  const productId = normalizeProductId(id);
+  const currentProduct = await productsRepository.findById(productId);
   if (!currentProduct) {
     throw new HttpError(404, 'Produto não encontrado');
   }
 
-  await productsRepository.updateStatus(id, ativo);
-  return productsRepository.findById(id);
+  await productsRepository.updateStatus(productId, normalizeBoolean(ativo, 'Campo ativo'));
+  return productsRepository.findById(productId);
+};
+
+const deleteProduct = async (id, user) => {
+  if (user?.role?.slug !== authConfig.roles.admin) {
+    throw new HttpError(403, 'Somente administradores podem excluir produto.', {
+      code: 'PRODUCT_DELETE_FORBIDDEN'
+    });
+  }
+
+  const productId = normalizeProductId(id);
+
+  return productsRepository.withTransaction(async (connection) => {
+    const product = await productsRepository.findForDeletion(productId, connection);
+    if (!product) {
+      throw new HttpError(404, 'Produto não encontrado');
+    }
+
+    if (parseFixedDecimal(product.estoque_atual) > 0n) {
+      throw new HttpError(409, PRODUCT_HAS_STOCK_MESSAGE, {
+        code: 'PRODUCT_HAS_STOCK'
+      });
+    }
+
+    const associations = await productsRepository.findProductAssociations(productId, connection);
+    if (associations.length) {
+      throw new HttpError(409, PRODUCT_HAS_HISTORY_MESSAGE, {
+        code: 'PRODUCT_HAS_HISTORY'
+      });
+    }
+
+    try {
+      const affectedRows = await productsRepository.deleteById(productId, connection);
+      if (!affectedRows) {
+        throw new HttpError(404, 'Produto não encontrado');
+      }
+      return { excluido: true, id: Number(productId) };
+    } catch (error) {
+      if (['ER_ROW_IS_REFERENCED', 'ER_ROW_IS_REFERENCED_2'].includes(error.code)) {
+        throw new HttpError(409, PRODUCT_HAS_HISTORY_MESSAGE, {
+          code: 'PRODUCT_HAS_HISTORY'
+        });
+      }
+      throw error;
+    }
+  });
 };
 
 export default {
+  deleteProduct,
   listProducts,
   getProductById,
   getProductByBarcode,

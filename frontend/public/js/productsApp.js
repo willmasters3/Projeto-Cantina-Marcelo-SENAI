@@ -11,6 +11,7 @@ const productForm = document.getElementById('productForm');
 const productMessage = document.getElementById('productMessage');
 const productSearchForm = document.getElementById('productSearchForm');
 const productSearchInput = document.getElementById('productSearch');
+const productStatusFilter = document.getElementById('productStatusFilter');
 const productList = document.getElementById('productList');
 const categorySelect = document.getElementById('productCategory');
 const barcodeInput = document.getElementById('productBarcode');
@@ -41,6 +42,8 @@ const imageExtensionsByType = new Map([
   ['image/webp', new Set(['webp'])]
 ]);
 const maxImageSizeBytes = 5 * 1024 * 1024;
+const deleteWithStockWarning = 'Atenção: este produto possui estoque atual. Excluir ou remover sem ajuste pode causar perda de controle. O sistema irá bloquear a exclusão física.';
+const deleteWithoutStockConfirmation = 'Deseja realmente excluir este produto? Esta ação só será permitida se ele não tiver histórico no sistema.';
 
 let duplicateProduct = null;
 let editingProductId = null;
@@ -57,6 +60,10 @@ const showMessage = (element, message, isError = false) => {
   element.textContent = message;
   element.className = isError ? 'message error' : 'message success';
 };
+
+const productHasStock = (product) => Number(product.estoque_atual) > 0;
+
+const getSelectedProductStatus = () => productStatusFilter?.value || 'active';
 
 const renderProducts = (products) => {
   productList.replaceChildren();
@@ -104,12 +111,31 @@ const renderProducts = (products) => {
       content.appendChild(line);
     });
 
+    const actions = document.createElement('div');
+    actions.className = 'product-card-actions';
+
     const editButton = document.createElement('button');
     editButton.type = 'button';
-    editButton.className = 'secondary-action product-edit-button';
-    editButton.textContent = 'Editar produto';
+    editButton.className = 'secondary-action compact-button';
+    editButton.textContent = 'Editar';
     editButton.addEventListener('click', () => openProductEditor(product));
-    content.appendChild(editButton);
+
+    const statusButton = document.createElement('button');
+    statusButton.type = 'button';
+    statusButton.className = product.ativo
+      ? 'secondary-action compact-button'
+      : 'secondary-action compact-button';
+    statusButton.textContent = product.ativo ? 'Inativar' : 'Ativar';
+    statusButton.addEventListener('click', () => updateProductStatus(product, statusButton));
+
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'danger-action compact-button';
+    deleteButton.textContent = 'Excluir';
+    deleteButton.addEventListener('click', () => deleteProduct(product, deleteButton));
+
+    actions.append(editButton, statusButton, deleteButton);
+    content.appendChild(actions);
     item.appendChild(content);
     productList.appendChild(item);
   });
@@ -254,6 +280,64 @@ const openProductEditor = (product) => {
   productForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
+const updateProductStatus = async (product, button = null) => {
+  const newStatus = !Boolean(product.ativo);
+  const action = newStatus ? 'ativar' : 'inativar';
+  if (!window.confirm(`Deseja ${action} o produto ${product.nome}?`)) return;
+
+  if (button) button.disabled = true;
+  try {
+    await adminApi.updateProductStatus(product.id, newStatus);
+    if (editingProductId === product.id) editingProductActive = newStatus;
+    showMessage(productMessage, `Produto ${newStatus ? 'ativado' : 'inativado'} com sucesso.`);
+    await loadProducts(productSearchInput.value);
+  } catch (error) {
+    showMessage(productMessage, error.message, true);
+  } finally {
+    if (button) button.disabled = false;
+  }
+};
+
+const offerInactivationAfterHistoryBlock = async (product, blockedMessage) => {
+  if (!product.ativo) return;
+  const shouldInactivate = window.confirm(
+    `${blockedMessage}\n\nDeseja inativar este produto para ele não aparecer nas vendas?`
+  );
+  if (!shouldInactivate) return;
+
+  try {
+    await adminApi.updateProductStatus(product.id, false);
+    if (editingProductId === product.id) editingProductActive = false;
+    showMessage(productMessage, 'Produto inativado com sucesso. O histórico foi mantido.');
+    await loadProducts(productSearchInput.value);
+  } catch (error) {
+    showMessage(productMessage, error.message, true);
+  }
+};
+
+const deleteProduct = async (product, button = null) => {
+  const confirmationMessage = productHasStock(product)
+    ? `${deleteWithStockWarning}\n\nDeseja continuar a tentativa de exclusão?`
+    : deleteWithoutStockConfirmation;
+
+  if (!window.confirm(confirmationMessage)) return;
+
+  if (button) button.disabled = true;
+  try {
+    await adminApi.deleteProduct(product.id);
+    if (editingProductId === product.id) resetProductForm();
+    showMessage(productMessage, 'Produto excluído com sucesso.');
+    await loadProducts(productSearchInput.value);
+  } catch (error) {
+    showMessage(productMessage, error.message, true);
+    if (error.status === 409 && error.data?.code === 'PRODUCT_HAS_HISTORY') {
+      await offerInactivationAfterHistoryBlock(product, error.message);
+    }
+  } finally {
+    if (button) button.disabled = false;
+  }
+};
+
 const loadCategories = async () => {
   try {
     const categories = await adminApi.listCategories();
@@ -316,9 +400,9 @@ const checkBarcode = async ({ focusName = true } = {}) => {
   }
 };
 
-const loadProducts = async (search = '') => {
+const loadProducts = async (search = '', status = getSelectedProductStatus()) => {
   try {
-    const products = await adminApi.listProducts(search);
+    const products = await adminApi.listProducts(search, status);
     renderProducts(products);
   } catch (error) {
     showMessage(productMessage, error.message, true);
@@ -518,6 +602,10 @@ cancelProductEditButton.addEventListener('click', () => {
 
 productSearchForm.addEventListener('submit', async (event) => {
   event.preventDefault();
+  await loadProducts(productSearchInput.value);
+});
+
+productStatusFilter.addEventListener('change', async () => {
   await loadProducts(productSearchInput.value);
 });
 

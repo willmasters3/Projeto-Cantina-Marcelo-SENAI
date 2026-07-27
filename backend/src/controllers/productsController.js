@@ -5,7 +5,8 @@ const listProducts = async (req, res, next) => {
     const products = await productsService.listProducts({
       search: req.query.search,
       barcode: req.query.barcode,
-      categoryId: req.query.category_id ? Number(req.query.category_id) : null
+      categoryId: req.query.category_id ? Number(req.query.category_id) : null,
+      status: req.query.status
     });
     res.status(200).json({ data: products });
   } catch (error) {
@@ -58,7 +59,17 @@ const updateProductStatus = async (req, res, next) => {
   }
 };
 
+const deleteProduct = async (req, res, next) => {
+  try {
+    const result = await productsService.deleteProduct(req.params.id, req.user);
+    res.status(200).json({ data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export default {
+  deleteProduct,
   listProducts,
   getProductById,
   getProductByBarcode,

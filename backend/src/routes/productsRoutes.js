@@ -11,19 +11,27 @@ import productImageUploadMiddleware from '../middlewares/productImageUploadMiddl
 
 const router = Router();
 
-router.use(requireAuth, requireRole([authConfig.roles.admin]));
+const requireAdmin = requireRole([authConfig.roles.admin]);
+const requireProductDeletePermission = requireRole(
+  [authConfig.roles.admin],
+  'Somente administradores podem excluir produto.'
+);
 
-router.get('/', productsController.listProducts);
-router.get('/barcode/:barcode', productsController.getProductByBarcode);
-router.get('/:id', productsController.getProductById);
-router.post('/', validateProductPayload, productsController.createProduct);
-router.put('/:id', validateProductPayload, productsController.updateProduct);
-router.patch('/:id/status', validateProductStatus, productsController.updateProductStatus);
+router.use(requireAuth);
+
+router.get('/', requireAdmin, productsController.listProducts);
+router.get('/barcode/:barcode', requireAdmin, productsController.getProductByBarcode);
+router.get('/:id', requireAdmin, productsController.getProductById);
+router.post('/', requireAdmin, validateProductPayload, productsController.createProduct);
+router.put('/:id', requireAdmin, validateProductPayload, productsController.updateProduct);
+router.patch('/:id/status', requireAdmin, validateProductStatus, productsController.updateProductStatus);
 router.post(
   '/:id/image',
+  requireAdmin,
   productImageUploadMiddleware,
   productImagesController.uploadPrimaryImage
 );
-router.delete('/:id/image', productImagesController.removePrimaryImage);
+router.delete('/:id/image', requireAdmin, productImagesController.removePrimaryImage);
+router.delete('/:id', requireProductDeletePermission, productsController.deleteProduct);
 
 export default router;

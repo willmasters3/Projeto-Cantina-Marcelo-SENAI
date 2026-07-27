@@ -28,10 +28,10 @@ const requireAuth = async (req, res, next) => {
   }
 };
 
-const requireRole = (allowedRoles = []) => {
+const requireRole = (allowedRoles = [], forbiddenMessage = 'Permissão negada') => {
   return (req, res, next) => {
     if (!req.user || !allowedRoles.includes(req.user.role.slug)) {
-      return next(new HttpError(403, 'Permissão negada'));
+      return next(new HttpError(403, forbiddenMessage));
     }
     return next();
   };

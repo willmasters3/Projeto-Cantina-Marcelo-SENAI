@@ -6,10 +6,20 @@ const errorHandlerMiddleware = (err, req, res, _next) => {
     console.error(`[${req.method} ${req.originalUrl}]\n${err.stack || err.message}`);
   }
 
-  res.status(statusCode).json({
+  const payload = {
     success: false,
     error: message
-  });
+  };
+
+  if (statusCode < 500 && err.code) {
+    payload.code = err.code;
+  }
+
+  if (statusCode < 500 && err.details) {
+    payload.details = err.details;
+  }
+
+  res.status(statusCode).json(payload);
 };
 
 export default errorHandlerMiddleware;

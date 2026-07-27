@@ -32,10 +32,12 @@ const updateCategory = async (id, payload) => request(`/categories/${id}`, {
   body: JSON.stringify(payload)
 });
 
-const listProducts = async (search) => {
+const listProducts = async (search, status = 'active') => {
   const params = new URLSearchParams();
   if (search) params.append('search', search);
-  return request(`/products?${params.toString()}`);
+  if (status) params.append('status', status);
+  const query = params.toString();
+  return request(query ? `/products?${query}` : '/products');
 };
 
 const createProduct = async (payload) => request('/products', {
@@ -50,6 +52,15 @@ const getProductByBarcode = async (barcode) => (
 const updateProduct = async (id, payload) => request(`/products/${id}`, {
   method: 'PUT',
   body: JSON.stringify(payload)
+});
+
+const updateProductStatus = async (id, ativo) => request(`/products/${id}/status`, {
+  method: 'PATCH',
+  body: JSON.stringify({ ativo })
+});
+
+const deleteProduct = async (id) => request(`/products/${id}`, {
+  method: 'DELETE'
 });
 
 const uploadProductImage = async (id, file) => request(`/products/${id}/image`, {
@@ -72,7 +83,9 @@ export default {
   listProducts,
   removeProductImage,
   createProduct,
+  deleteProduct,
   getProductByBarcode,
   uploadProductImage,
-  updateProduct
+  updateProduct,
+  updateProductStatus
 };

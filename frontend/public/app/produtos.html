@@ -171,6 +171,11 @@
           <h2>Pesquisar produtos</h2>
           <form id="productSearchForm">
             <input id="productSearch" type="search" placeholder="Nome ou código de barras" />
+            <select id="productStatusFilter" aria-label="Filtrar produtos por status">
+              <option value="active">Ativos</option>
+              <option value="inactive">Inativos</option>
+              <option value="all">Todos</option>
+            </select>
             <button type="submit">Buscar</button>
           </form>
           <div id="productList"></div>
