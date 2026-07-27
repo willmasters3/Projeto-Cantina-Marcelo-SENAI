@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Relatórios - Cantina</title>
   <link rel="stylesheet" href="../css/main.css" />
-  <link rel="stylesheet" href="../css/pages/reports.css" />
+  <link rel="stylesheet" href="../css/pages/relatorios.css" />
 </head>
 <body>
   <div class="admin-layout">
@@ -29,15 +29,309 @@
         <button id="logoutButton">Sair</button>
       </header>
 
-      <section class="page-content">
-        <h1>Relatórios</h1>
-        <div class="module-placeholder">
-          <h2>Módulo em desenvolvimento</h2>
-          <p>Os relatórios serão implementados em uma próxima etapa.</p>
+      <section class="page-content reports-page">
+        <div class="reports-title-row">
+          <div>
+            <h1>Relatórios</h1>
+            <p>Acompanhe vendas, recebimentos e situação financeira da cantina.</p>
+          </div>
+          <div class="reports-actions">
+            <button id="printReportButton" class="secondary-action" type="button">Imprimir</button>
+            <button id="exportPdfButton" class="danger-action" type="button">Exportar PDF</button>
+            <button id="exportExcelButton" class="success-action" type="button">Exportar Excel</button>
+          </div>
         </div>
+
+        <p id="reportsMessage" class="message" aria-live="polite"></p>
+
+        <div class="period-badge" id="periodBadge">Período: hoje</div>
+
+        <div class="report-summary-grid" aria-label="Resumo do período">
+          <article class="report-summary-card blue">
+            <span class="report-icon" aria-hidden="true">$</span>
+            <div>
+              <span>Vendas do período</span>
+              <strong id="cardSalesTotal">R$ 0,00</strong>
+              <small id="cardSalesCount">0 vendas confirmadas</small>
+            </div>
+          </article>
+          <article class="report-summary-card green">
+            <span class="report-icon" aria-hidden="true">R</span>
+            <div>
+              <span>Recebido no período</span>
+              <strong id="cardReceivedTotal">R$ 0,00</strong>
+              <small>À vista e recebimentos de fiado</small>
+            </div>
+          </article>
+          <article class="report-summary-card orange">
+            <span class="report-icon" aria-hidden="true">F</span>
+            <div>
+              <span>Fiado em aberto</span>
+              <strong id="cardFiadoOpen">R$ 0,00</strong>
+              <small id="cardFiadoClients">0 clientes com pendência</small>
+            </div>
+          </article>
+          <article class="report-summary-card violet">
+            <span class="report-icon" aria-hidden="true">L</span>
+            <div>
+              <span>Lucro estimado</span>
+              <strong id="cardEstimatedProfit">R$ 0,00</strong>
+              <small>Com base no custo dos itens</small>
+            </div>
+          </article>
+        </div>
+
+        <form id="reportsFilters" class="reports-filters">
+          <div>
+            <label for="startDate">Data inicial</label>
+            <input id="startDate" name="startDate" type="date" required />
+          </div>
+          <div>
+            <label for="endDate">Data final</label>
+            <input id="endDate" name="endDate" type="date" required />
+          </div>
+          <div>
+            <label for="paymentMethod">Forma de pagamento</label>
+            <select id="paymentMethod" name="paymentMethod">
+              <option value="ALL">Todas</option>
+              <option value="DINHEIRO">Dinheiro</option>
+              <option value="PIX">Pix</option>
+              <option value="DEBITO">Débito</option>
+              <option value="CREDITO">Crédito</option>
+              <option value="OUTROS">Outro</option>
+              <option value="FIADO">Fiado</option>
+            </select>
+          </div>
+          <div>
+            <label for="clientFilter">Cliente</label>
+            <select id="clientFilter" name="clientId">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div>
+            <label for="productFilter">Produto</label>
+            <select id="productFilter" name="productId">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div>
+            <label for="statusFilter">Status</label>
+            <select id="statusFilter" name="status">
+              <option value="ALL">Todos</option>
+              <option value="CONFIRMADA">Confirmada</option>
+              <option value="CANCELADA">Cancelada</option>
+            </select>
+          </div>
+          <button id="generateReportButton" type="submit">Gerar relatório</button>
+          <button class="secondary-action" type="reset">Limpar filtros</button>
+        </form>
+
+        <div class="reports-tabs" role="tablist" aria-label="Seções do relatório">
+          <button class="active" type="button" data-tab="summary">Resumo geral</button>
+          <button type="button" data-tab="sales">Vendas</button>
+          <button type="button" data-tab="cash">Caixa</button>
+          <button type="button" data-tab="fiado">Fiado</button>
+          <button type="button" data-tab="payments">Pagamentos</button>
+          <button type="button" data-tab="products">Produtos</button>
+          <button type="button" data-tab="stock">Estoque</button>
+        </div>
+
+        <section id="summaryTab" class="report-tab-panel active" data-tab-panel="summary">
+          <div class="reports-dashboard-grid">
+            <article class="report-panel">
+              <h2>Vendas por forma de pagamento</h2>
+              <div class="payment-chart-wrap">
+                <div id="paymentChart" class="payment-chart"></div>
+                <div id="paymentLegend" class="chart-legend"></div>
+              </div>
+            </article>
+            <article class="report-panel">
+              <h2>Evolução das vendas (7 dias)</h2>
+              <div id="salesTrend" class="trend-chart"></div>
+            </article>
+            <article class="report-panel">
+              <h2>Top 5 produtos mais vendidos</h2>
+              <div id="topProductsList" class="compact-table"></div>
+            </article>
+            <article class="report-panel">
+              <h2>Fiado - Devedores (top 5)</h2>
+              <div id="summaryDebtorsList" class="compact-table"></div>
+            </article>
+            <article class="report-panel">
+              <h2>Recebimentos de fiado</h2>
+              <div id="summaryFiadoReceipts" class="compact-table"></div>
+            </article>
+            <article class="report-panel">
+              <h2>Resumo do caixa</h2>
+              <div id="cashSummaryBox" class="cash-summary-box"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="report-tab-panel" data-tab-panel="sales">
+          <div class="report-panel">
+            <h2>Vendas do período</h2>
+            <div class="report-table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nº</th>
+                    <th>Data/hora</th>
+                    <th>Cliente</th>
+                    <th>Forma</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Operador</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="salesTableBody"></tbody>
+              </table>
+            </div>
+            <div class="report-pagination">
+              <span id="salesPaginationInfo">Mostrando 0 a 0 de 0 vendas</span>
+              <div id="salesPaginationButtons" class="pagination-buttons"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="report-tab-panel" data-tab-panel="cash">
+          <div class="reports-split-grid">
+            <article class="report-panel">
+              <h2>Resumo do caixa</h2>
+              <div id="cashReportSummary" class="cash-summary-box"></div>
+            </article>
+            <article class="report-panel">
+              <h2>Sessões de caixa</h2>
+              <div class="report-table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Abertura</th>
+                      <th>Fechamento</th>
+                      <th>Aberto por</th>
+                      <th>Fechado por</th>
+                      <th>Inicial</th>
+                      <th>Esperado</th>
+                      <th>Informado</th>
+                      <th>Diferença</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cashSessionsTable"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="report-tab-panel" data-tab-panel="fiado">
+          <div class="report-mini-grid">
+            <article class="report-mini-card">
+              <span>Total em aberto</span>
+              <strong id="fiadoOpenTotal">R$ 0,00</strong>
+            </article>
+            <article class="report-mini-card">
+              <span>Clientes com pendência</span>
+              <strong id="fiadoPendingClients">0</strong>
+            </article>
+            <article class="report-mini-card">
+              <span>Recebido no período</span>
+              <strong id="fiadoReceivedPeriod">R$ 0,00</strong>
+            </article>
+          </div>
+          <div class="reports-split-grid">
+            <article class="report-panel">
+              <h2>Clientes com pendência</h2>
+              <div id="fiadoDebtorsTable" class="compact-table"></div>
+            </article>
+            <article class="report-panel">
+              <h2>Recebimentos de fiado</h2>
+              <div id="fiadoReceiptsTable" class="compact-table"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="report-tab-panel" data-tab-panel="payments">
+          <div class="report-panel">
+            <h2>Pagamentos por forma</h2>
+            <div id="paymentsTable" class="compact-table"></div>
+          </div>
+        </section>
+
+        <section class="report-tab-panel" data-tab-panel="products">
+          <div class="report-panel">
+            <h2>Produtos vendidos</h2>
+            <div class="report-table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Produto</th>
+                    <th>Categoria</th>
+                    <th>Qtd.</th>
+                    <th>Total vendido</th>
+                    <th>Custo estimado</th>
+                    <th>Lucro estimado</th>
+                    <th>Estoque atual</th>
+                  </tr>
+                </thead>
+                <tbody id="productsReportTable"></tbody>
+              </table>
+            </div>
+            <div class="report-pagination">
+              <span id="productsPaginationInfo">Mostrando 0 a 0 de 0 produtos</span>
+              <div id="productsPaginationButtons" class="pagination-buttons"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="report-tab-panel" data-tab-panel="stock">
+          <div class="report-mini-grid">
+            <article class="report-mini-card">
+              <span>Valor estimado do estoque</span>
+              <strong id="stockValueReport">R$ 0,00</strong>
+            </article>
+            <article class="report-mini-card">
+              <span>Produtos com baixo estoque</span>
+              <strong id="stockLowCount">0</strong>
+            </article>
+            <article class="report-mini-card">
+              <span>Produtos sem estoque</span>
+              <strong id="stockOutCount">0</strong>
+            </article>
+          </div>
+          <div class="reports-split-grid">
+            <article class="report-panel">
+              <h2>Produtos com estoque baixo</h2>
+              <div id="stockLowTable" class="compact-table"></div>
+            </article>
+            <article class="report-panel">
+              <h2>Movimentações do período</h2>
+              <div id="stockMovementsTable" class="compact-table"></div>
+            </article>
+          </div>
+        </section>
+
+        <p class="reports-footer-note">
+          Relatórios gerados com base nas informações do sistema. Para maior segurança, recomenda-se exportar os dados diariamente.
+        </p>
       </section>
+
+      <dialog id="saleDetailsDialog" class="report-dialog">
+        <div class="report-dialog-content">
+          <div class="dialog-header">
+            <div>
+              <h2 id="saleDetailsTitle">Detalhes da venda</h2>
+              <p id="saleDetailsSubtitle"></p>
+            </div>
+            <button id="closeSaleDetailsButton" class="secondary-action" type="button">Fechar</button>
+          </div>
+          <div id="saleDetailsContent"></div>
+        </div>
+      </dialog>
     </div>
   </div>
   <script type="module" src="../js/appLayout.js"></script>
+  <script type="module" src="../js/reportsApp.js"></script>
 </body>
 </html>
