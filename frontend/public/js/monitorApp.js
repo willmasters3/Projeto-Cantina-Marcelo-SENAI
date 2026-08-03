@@ -25,11 +25,21 @@ const saleMonitorItems = document.getElementById('saleMonitorItems');
 const saleMonitorSubtotal = document.getElementById('saleMonitorSubtotal');
 const saleMonitorTotal = document.getElementById('saleMonitorTotal');
 const saleMonitorStatus = document.getElementById('saleMonitorStatus');
+const pairingScreen = document.getElementById('pairingScreen');
+const pairingForm = document.getElementById('pairingForm');
+const pairingToken = document.getElementById('pairingToken');
+const pairingButton = document.getElementById('pairingButton');
+const pairingMessage = document.getElementById('pairingMessage');
+const pairingStatus = document.getElementById('pairingStatus');
+const pairedTerminal = document.getElementById('pairedTerminal');
 
 const accountTimeoutMilliseconds = 30_000;
+const pairingStorageKey = 'cantina.monitor.pairing';
 let accountTimeout = null;
 let accountRequestSequence = 0;
 let currentMode = 'CONSULTA';
+let monitorEvents = null;
+let activePairing = null;
 
 bindCpfInput(accountCpf);
 
@@ -44,6 +54,87 @@ const showAccountMessage = (message = '', isError = false) => {
   accountMessage.className = message
     ? `monitor-message ${isError ? 'error' : 'success'}`
     : 'monitor-message';
+};
+
+const showPairingMessage = (message = '', isError = false) => {
+  pairingMessage.textContent = message;
+  pairingMessage.className = message
+    ? `monitor-message ${isError ? 'error' : 'success'}`
+    : 'monitor-message';
+};
+
+const normalizePairingToken = (value) => String(value || '')
+  .replace(/\s+/g, '')
+  .trim()
+  .toUpperCase();
+
+const savePairing = (pairing) => {
+  try {
+    sessionStorage.setItem(pairingStorageKey, JSON.stringify({
+      terminal: pairing.terminal,
+      token: pairing.token
+    }));
+  } catch {
+    // sessionStorage may be blocked in kiosk browsers; pairing still works for the current page.
+  }
+};
+
+const loadStoredPairing = () => {
+  try {
+    const stored = JSON.parse(sessionStorage.getItem(pairingStorageKey) || 'null');
+    if (!stored?.token || !stored?.terminal) return null;
+    const token = normalizePairingToken(stored.token);
+    if (!/^[A-Z0-9]{6,8}$/.test(token)) return null;
+    return { terminal: String(stored.terminal).trim().toUpperCase(), token };
+  } catch {
+    return null;
+  }
+};
+
+const clearStoredPairing = () => {
+  try {
+    sessionStorage.removeItem(pairingStorageKey);
+  } catch {
+    // Ignore storage cleanup failures; the server-side token still expires shortly.
+  }
+};
+
+const requestMonitorFullscreen = async () => {
+  if (document.fullscreenElement || !document.documentElement.requestFullscreen) return false;
+  try {
+    await document.documentElement.requestFullscreen();
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const exitMonitorFullscreen = async () => {
+  if (!document.fullscreenElement || !document.exitFullscreen) return;
+  try {
+    await document.exitFullscreen();
+  } catch {
+    // Browser may deny the exit request; the user can still press Esc if a keyboard exists.
+  }
+};
+
+const requestPairing = async (token, { force = false } = {}) => {
+  const response = await fetch('/api/v1/monitor/pair', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ token, force })
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error = new Error(payload?.error || 'Não foi possível conectar o monitor.');
+    error.status = response.status;
+    error.code = payload?.code || null;
+    throw error;
+  }
+  return payload.data;
 };
 
 const clearAccountTimeout = () => {
@@ -77,12 +168,21 @@ const scheduleAccountExpiration = () => {
   accountTimeout = setTimeout(returnToInitialAccountScreen, accountTimeoutMilliseconds);
 };
 
+const renderPairingState = () => {
+  const isSaleMode = currentMode === 'COMPRA_EM_ANDAMENTO';
+  const isPaired = Boolean(activePairing);
+  pairingScreen.hidden = isPaired || isSaleMode;
+  pairingStatus.hidden = !isPaired || isSaleMode;
+  if (isPaired) pairedTerminal.textContent = activePairing.terminal;
+};
+
 const showAccountMode = () => {
   currentMode = 'CONSULTA';
   accountScreen.hidden = false;
   saleScreen.hidden = true;
   monitorHint.hidden = false;
   monitorModeLabel.textContent = 'Consulta de conta';
+  renderPairingState();
   returnToInitialAccountScreen();
 };
 
@@ -92,6 +192,8 @@ const showSaleMode = () => {
   showAccountMessage();
   accountScreen.hidden = true;
   saleScreen.hidden = false;
+  pairingScreen.hidden = true;
+  pairingStatus.hidden = true;
   monitorHint.hidden = true;
   monitorModeLabel.textContent = 'Acompanhe sua compra';
 };
@@ -199,6 +301,128 @@ const handleMonitorState = (state) => {
   showAccountMode();
 };
 
+const closeMonitorEvents = () => {
+  if (!monitorEvents) return;
+  monitorEvents.close();
+  monitorEvents = null;
+};
+
+const disconnectMonitor = (message = 'Monitor desconectado.', isError = true) => {
+  closeMonitorEvents();
+  clearStoredPairing();
+  activePairing = null;
+  showAccountMode();
+  renderPairingState();
+  showPairingMessage(message, isError);
+  pairingToken.focus();
+};
+
+const connectMonitorEvents = (pairing) => {
+  closeMonitorEvents();
+  activePairing = pairing;
+  savePairing(pairing);
+  renderPairingState();
+  showPairingMessage(`Monitor vinculado ao ${pairing.terminal}.`);
+  const params = new URLSearchParams({ token: pairing.token });
+  monitorEvents = new EventSource(`/api/v1/monitor/events?${params.toString()}`);
+  monitorEvents.addEventListener('monitor-state', (event) => {
+    try {
+      handleMonitorState(JSON.parse(event.data));
+    } catch {
+      showPairingMessage('Aguardando atualização do caixa...');
+    }
+  });
+  monitorEvents.addEventListener('monitor-disconnected', (event) => {
+    let reason = null;
+    try {
+      reason = JSON.parse(event.data)?.reason || null;
+    } catch {
+      reason = null;
+    }
+    const message = reason === 'CASH_CLOSED'
+      ? 'O caixa foi fechado. Informe uma nova chave quando houver novo atendimento.'
+      : 'A conexão deste monitor foi transferida para outra tela.';
+    disconnectMonitor(message, true);
+  });
+  monitorEvents.onerror = () => {
+    if (!activePairing) return;
+    showPairingMessage('Tentando restabelecer a conexão com o caixa...', true);
+  };
+};
+
+pairingForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const token = normalizePairingToken(pairingToken.value);
+  pairingToken.value = token;
+  if (!/^[A-Z0-9]{6,8}$/.test(token)) {
+    showPairingMessage('Informe a chave exibida no caixa.', true);
+    pairingToken.focus();
+    return;
+  }
+
+  pairingButton.disabled = true;
+  const enteredFullscreen = await requestMonitorFullscreen();
+  showPairingMessage('Conectando...');
+  try {
+    const pairing = await requestPairing(token);
+    connectMonitorEvents(pairing);
+  } catch (error) {
+    if (error.status === 409 && error.code === 'MONITOR_ALREADY_CONNECTED') {
+      const shouldTransfer = window.confirm(
+        'Já existe um monitor conectado a este caixa. Deseja transferir a conexão para este novo monitor?'
+      );
+      if (shouldTransfer) {
+        try {
+          const pairing = await requestPairing(token, { force: true });
+          connectMonitorEvents(pairing);
+          return;
+        } catch (transferError) {
+          if (enteredFullscreen) await exitMonitorFullscreen();
+          showPairingMessage(transferError.message, true);
+          return;
+        }
+      }
+      if (enteredFullscreen) await exitMonitorFullscreen();
+      showPairingMessage('Conexão mantida no monitor atual.');
+      return;
+    }
+    if (enteredFullscreen) await exitMonitorFullscreen();
+    showPairingMessage(error.message, true);
+  } finally {
+    pairingButton.disabled = false;
+  }
+});
+
+pairingToken.addEventListener('input', () => {
+  pairingToken.value = normalizePairingToken(pairingToken.value).slice(0, 8);
+  showPairingMessage();
+});
+
+const restoreStoredPairing = async () => {
+  const storedPairing = loadStoredPairing();
+  if (!storedPairing) {
+    pairingToken.focus();
+    return;
+  }
+
+  pairingToken.value = storedPairing.token;
+  pairingButton.disabled = true;
+  showPairingMessage('Reconectando monitor...');
+  try {
+    const pairing = await requestPairing(storedPairing.token, { force: true });
+    connectMonitorEvents(pairing);
+    await requestMonitorFullscreen();
+  } catch {
+    clearStoredPairing();
+    activePairing = null;
+    showAccountMode();
+    showPairingMessage('Não foi possível reconectar. Informe a nova chave do caixa.', true);
+    pairingToken.focus();
+  } finally {
+    pairingButton.disabled = false;
+  }
+};
+
 accountForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const cpf = onlyCpfDigits(accountCpf.value);
@@ -261,12 +485,4 @@ const updateClock = () => {
 updateClock();
 setInterval(updateClock, 1000);
 showAccountMode();
-
-const monitorEvents = new EventSource('/api/v1/monitor/events?terminal=CAIXA-01');
-monitorEvents.addEventListener('monitor-state', (event) => {
-  try {
-    handleMonitorState(JSON.parse(event.data));
-  } catch {
-    showAccountMessage('Aguardando atualização do caixa...');
-  }
-});
+void restoreStoredPairing();

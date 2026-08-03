@@ -277,6 +277,51 @@
   text-overflow: ellipsis;
 }
 
+.cash-monitor-pairing {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.65rem;
+  padding: 0.65rem;
+  border: 1px solid #335072;
+  border-radius: 8px;
+  background: #0f2a4c;
+}
+
+.cash-monitor-pairing > span {
+  color: #bfdbfe;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cash-monitor-pairing > strong {
+  color: #fff;
+  font-size: 1.45rem;
+  letter-spacing: 0.18em;
+}
+
+.cash-monitor-pairing > small {
+  color: #cbd5e1;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.cash-monitor-sidebar-button {
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.55rem;
+  border: 1px solid #75a4f5;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: var(--font-size-sm);
+}
+
+.cash-monitor-sidebar-button:hover {
+  border-color: #93c5fd;
+  background: #2563eb;
+}
+
 .cash-close-sidebar-button {
   width: 100%;
   margin-top: 0.6rem;

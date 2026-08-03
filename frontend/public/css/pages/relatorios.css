@@ -445,7 +445,7 @@
   .reports-filters,
   .reports-tabs,
   .report-pagination {
-    display: none !important;
+    display: none;
   }
 
   .admin-layout {

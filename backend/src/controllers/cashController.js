@@ -27,6 +27,16 @@ const closeSession = async (req, res, next) => {
   }
 };
 
+const createMonitorPairing = async (req, res, next) => {
+  try {
+    const pairing = await cashService.createMonitorPairing(req.body);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(201).json({ data: pairing });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getProductByBarcode = async (req, res, next) => {
   try {
     const product = await cashService.getProductByBarcode(req.params.barcode);
@@ -84,6 +94,7 @@ const cancelSale = async (req, res, next) => {
 export default {
   cancelSale,
   closeSession,
+  createMonitorPairing,
   createSale,
   getCurrentSession,
   getProductByBarcode,

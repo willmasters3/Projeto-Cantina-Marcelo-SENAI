@@ -20,6 +20,10 @@ const sessionOpenedAt = document.getElementById('sessionOpenedAt');
 const sessionOpeningAmount = document.getElementById('sessionOpeningAmount');
 const sessionExpectedAmount = document.getElementById('sessionExpectedAmount');
 const showCloseCashButton = document.getElementById('showCloseCashButton');
+const openMonitorButton = document.getElementById('openMonitorButton');
+const monitorPairingPanel = document.getElementById('monitorPairingPanel');
+const monitorPairingToken = document.getElementById('monitorPairingToken');
+const monitorPairingHint = document.getElementById('monitorPairingHint');
 const closeCashForm = document.getElementById('closeCashForm');
 const closingAmount = document.getElementById('closingAmount');
 const closingDifferenceReason = document.getElementById('closingDifferenceReason');
@@ -86,6 +90,24 @@ const showMessage = (message, isError = false) => {
   cashMessage.className = message
     ? `message ${isError ? 'error' : 'success'}`
     : 'message';
+};
+
+const clearMonitorPairing = () => {
+  monitorPairingPanel.hidden = true;
+  monitorPairingToken.textContent = '------';
+  monitorPairingHint.textContent = 'Informe esta chave na tela do monitor.';
+};
+
+const showMonitorPairing = (pairing) => {
+  monitorPairingPanel.hidden = false;
+  monitorPairingToken.textContent = pairing.token;
+  const expiresAt = new Date(pairing.expira_em);
+  monitorPairingHint.textContent = Number.isNaN(expiresAt.getTime())
+    ? 'Informe esta chave na tela do monitor.'
+    : `Informe no monitor até ${expiresAt.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    })}.`;
 };
 
 const createCell = (value) => {
@@ -483,10 +505,12 @@ const renderSession = () => {
   closeCashForm.hidden = true;
   cashSessionCard.hidden = isOpen;
   showCloseCashButton.hidden = !isOpen;
+  openMonitorButton.hidden = !isOpen;
   cashTerminalCard.classList.toggle('is-open', isOpen);
   cashSessionTitle.textContent = 'Abrir caixa';
 
   if (!isOpen) {
+    clearMonitorPairing();
     cashSessionBadge.textContent = 'Caixa fechado';
     cashSessionBadge.className = 'cash-session-badge closed';
     sessionTerminal.textContent = 'CAIXA-01';
@@ -614,6 +638,28 @@ openCashForm.addEventListener('submit', async (event) => {
     showMessage(error.message, true);
   } finally {
     openCashButton.disabled = false;
+  }
+});
+
+openMonitorButton.addEventListener('click', async () => {
+  if (!currentSession) {
+    showMessage('Abra o caixa antes de abrir o Monitor da Cantina.', true);
+    return;
+  }
+
+  const monitorWindow = window.open('/monitor', '_blank');
+  if (monitorWindow) monitorWindow.opener = null;
+  openMonitorButton.disabled = true;
+  try {
+    const pairing = await cashApi.createMonitorPairing({
+      terminal: currentSession.terminal_codigo
+    });
+    showMonitorPairing(pairing);
+    showMessage(`Chave ${pairing.token} gerada para o Monitor da Cantina.`);
+  } catch (error) {
+    showMessage(error.message, true);
+  } finally {
+    openMonitorButton.disabled = false;
   }
 });
 

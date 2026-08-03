@@ -5,6 +5,7 @@ import monitorAccountRateLimit from '../middlewares/monitorRateLimitMiddleware.j
 const router = Router();
 
 router.post('/account', monitorAccountRateLimit, monitorController.getAccount);
+router.post('/pair', monitorAccountRateLimit, monitorController.pairMonitor);
 router.get('/events', monitorController.streamState);
 
 export default router;

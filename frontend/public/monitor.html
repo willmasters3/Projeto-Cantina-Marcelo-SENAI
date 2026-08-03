@@ -35,6 +35,41 @@
   </header>
 
   <main class="monitor-main">
+    <section id="pairingScreen" class="monitor-pairing-card" aria-labelledby="pairingTitle">
+      <div class="monitor-pairing-copy">
+        <h1 id="pairingTitle">Vincular monitor ao caixa</h1>
+        <p>Informe a chave temporária exibida no caixa.</p>
+      </div>
+      <form id="pairingForm" class="monitor-pairing-form">
+        <label for="pairingToken">Chave</label>
+        <div>
+          <input
+            id="pairingToken"
+            type="text"
+            autocomplete="off"
+            maxlength="8"
+            placeholder="K7P9X2"
+            required
+          />
+          <button id="pairingButton" class="monitor-primary-action" type="submit">
+            Conectar
+          </button>
+        </div>
+      </form>
+      <p id="pairingMessage" class="monitor-message" aria-live="polite"></p>
+    </section>
+
+    <section id="pairingStatus" class="monitor-pairing-status" hidden>
+      <span>Monitor vinculado ao <strong id="pairedTerminal">CAIXA-01</strong></span>
+    </section>
+
+    <section id="fullscreenPrompt" class="monitor-fullscreen-prompt" hidden>
+      <span>Monitor fora da tela cheia</span>
+      <button id="fullscreenButton" class="monitor-primary-action" type="button">
+        Voltar para tela cheia
+      </button>
+    </section>
+
     <section id="accountScreen" class="monitor-mode" aria-labelledby="accountTitle">
       <div class="cpf-query-card">
         <div class="cpf-query-copy">

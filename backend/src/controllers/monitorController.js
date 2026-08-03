@@ -20,10 +20,36 @@ const updateState = (req, res, next) => {
   }
 };
 
+const pairMonitor = (req, res, next) => {
+  try {
+    const pairing = monitorStateService.confirmPairing(req.body?.token, {
+      force: Boolean(req.body?.force)
+    });
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(200).json({ data: pairing });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const streamState = (req, res, next) => {
   let terminal;
+  let pairingToken;
+  let connectionId;
+  let closed = false;
+
+  const disconnect = (reason) => {
+    if (closed || res.destroyed) return;
+    closed = true;
+    res.write(`event: monitor-disconnected\ndata: ${JSON.stringify({ reason })}\n\n`);
+    res.end();
+  };
+
   try {
-    terminal = monitorStateService.normalizeTerminal(req.query.terminal);
+    const pairing = monitorStateService.registerMonitorConnection(req.query.token, disconnect);
+    terminal = pairing.terminal;
+    pairingToken = pairing.token;
+    connectionId = pairing.connectionId;
   } catch (error) {
     next(error);
     return;
@@ -47,9 +73,11 @@ const streamState = (req, res, next) => {
   heartbeat.unref?.();
 
   req.on('close', () => {
+    closed = true;
     clearInterval(heartbeat);
     unsubscribe();
+    monitorStateService.unregisterMonitorConnection(terminal, pairingToken, connectionId);
   });
 };
 
-export default { getAccount, streamState, updateState };
+export default { getAccount, pairMonitor, streamState, updateState };

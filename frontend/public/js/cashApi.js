@@ -28,6 +28,10 @@ const closeSession = async (payload) => request('/session/close', {
   method: 'POST',
   body: JSON.stringify(payload)
 });
+const createMonitorPairing = async (payload) => request('/monitor-pairing', {
+  method: 'POST',
+  body: JSON.stringify(payload)
+});
 const updateMonitorState = async (payload) => request('/monitor-state', {
   method: 'PUT',
   body: JSON.stringify(payload)
@@ -54,6 +58,7 @@ const cancelSale = async (id, motivo) => request(`/sales/${id}/cancel`, {
 export default {
   cancelSale,
   closeSession,
+  createMonitorPairing,
   createSale,
   getCurrentSession,
   getProductByBarcode,

@@ -11,6 +11,7 @@ import categoriesRepository from '../src/repositories/categoriesRepository.js';
 import categoriesService from '../src/services/categoriesService.js';
 import cashRepository from '../src/repositories/cashRepository.js';
 import cashService from '../src/services/cashService.js';
+import monitorStateService from '../src/services/monitorStateService.js';
 import clientsRepository from '../src/repositories/clientsRepository.js';
 import clientsService from '../src/services/clientsService.js';
 import { isValidCpf, normalizeCpf } from '../src/utils/cpf.js';
@@ -96,6 +97,10 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
       const monitorResponse = await request('/monitor');
       assert.equal(monitorResponse.status, 200);
       assert.match(await monitorResponse.text(), /Consulta de conta/);
+
+      const monitorEventsResponse = await request('/api/v1/monitor/events');
+      assert.equal(monitorEventsResponse.status, 400);
+      assert.match((await monitorEventsResponse.json()).error, /Chave do monitor/);
     });
 
     await t.test('bloqueia páginas, APIs e arquivos HTML internos sem sessão', async () => {
@@ -108,6 +113,17 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
 
       const productsResponse = await request('/api/v1/products');
       assert.equal(productsResponse.status, 401);
+
+      const [monitorHtml, monitorScript] = await Promise.all([
+        fs.readFile(path.join(frontendPath, 'monitor.html'), 'utf8'),
+        fs.readFile(path.join(frontendPath, 'js/monitorApp.js'), 'utf8')
+      ]);
+      assert.match(monitorHtml, /id="accountForm"/);
+      assert.match(monitorHtml, /id="pairingForm"/);
+      assert.match(monitorScript, /\/api\/v1\/monitor\/account/);
+      assert.match(monitorScript, /\/api\/v1\/monitor\/pair/);
+      assert.match(monitorScript, /new EventSource\(`\/api\/v1\/monitor\/events\?\$\{params\.toString\(\)\}`\)/);
+      assert.doesNotMatch(monitorScript, /terminal=CAIXA-01/);
     });
 
     await t.test('aplica permissões de página e retorna auth/me no contrato público', async () => {
@@ -379,6 +395,7 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
         'pages/clients.css',
         'pages/estoque.css',
         'pages/fiado.css',
+        'pages/relatorios.css',
         'pages/reports.css',
         'pages/home.css',
         'pages/dashboard.css',
@@ -403,7 +420,7 @@ test('rotas públicas, autenticação e autorização sem acessar o banco', asyn
         ['app/clientes.html', '../css/pages/clients.css'],
         ['app/estoque.html', '../css/pages/estoque.css'],
         ['app/fiado.html', '../css/pages/fiado.css'],
-        ['app/relatorios.html', '../css/pages/reports.css'],
+        ['app/relatorios.html', '../css/pages/relatorios.css'],
         ['app/configuracoes.html', '../css/pages/settings.css']
       ]);
       const htmlSources = await Promise.all([...pageStyles].map(async ([htmlFile, pageStyle]) => {
@@ -1217,6 +1234,52 @@ test('fluxo funcional e transacional do Caixa sem acessar o banco', async (t) =>
       assert.equal(products[0].imagem_url, '/media/products/product-8-test.webp');
     });
 
+    await t.test('gera chave temporaria de monitor somente com caixa aberto', async () => {
+      monitorStateService.resetForTests();
+      cashRepository.findOpenSession = async () => null;
+
+      await assert.rejects(
+        cashService.createMonitorPairing({}, user),
+        (error) => error.status === 409 && /Abra o caixa/.test(error.message)
+      );
+
+      cashRepository.findOpenSession = async () => ({
+        id: 4,
+        status: 'ABERTA',
+        terminal_codigo: 'CAIXA-01'
+      });
+
+      const pairing = await cashService.createMonitorPairing({}, user);
+
+      assert.equal(pairing.terminal, 'CAIXA-01');
+      assert.match(pairing.token, /^[A-Z0-9]{6}$/);
+      assert.equal(pairing.expira_em_segundos, 600);
+      assert.equal(monitorStateService.confirmPairing(pairing.token).status, 'READY');
+      monitorStateService.resetForTests();
+    });
+
+    await t.test('exige confirmacao para transferir monitor ja conectado', () => {
+      monitorStateService.resetForTests();
+      const firstPairing = monitorStateService.createPairingToken('CAIXA-01');
+      let disconnectReason = null;
+      monitorStateService.registerMonitorConnection(firstPairing.token, (reason) => {
+        disconnectReason = reason;
+      });
+
+      const secondPairing = monitorStateService.createPairingToken('CAIXA-01');
+
+      assert.throws(
+        () => monitorStateService.confirmPairing(secondPairing.token),
+        (error) => error.status === 409 && error.code === 'MONITOR_ALREADY_CONNECTED'
+      );
+
+      const transfer = monitorStateService.confirmPairing(secondPairing.token, { force: true });
+
+      assert.equal(transfer.terminal, 'CAIXA-01');
+      assert.equal(disconnectReason, 'TRANSFERRED');
+      monitorStateService.resetForTests();
+    });
+
     await t.test('confirma venda à vista usando preço e estoque travados no servidor', async () => {
       useFakeTransaction();
       const saleItems = [];
@@ -1542,15 +1605,21 @@ test('fluxo funcional e transacional do Caixa sem acessar o banco', async (t) =>
       assert.match(files[0], /data-sale-type="FIADO"/);
       assert.match(files[0], /id="cashReceived"/);
       assert.match(files[0], /id="cashChange"/);
+      assert.match(files[0], /id="openMonitorButton"/);
+      assert.match(files[0], /id="monitorPairingToken"/);
       assert.match(files[1], /cashApi\.searchProducts\(''\)/);
+      assert.match(files[1], /cashApi\.createMonitorPairing/);
       assert.match(files[1], /received < getCartTotal\(\)/);
+      assert.match(files[2], /\/monitor-pairing/);
       assert.doesNotMatch(files[1], /valor_recebido/);
+      assert.match(files[4], /cash-monitor-pairing/);
       assert.match(files[4], /\/\* Sidebar \*\//);
       assert.match(files[4], /\/\* Quick products \*\//);
       assert.match(files[4], /\/\* Responsiveness \*\//);
       assert.doesNotMatch(files[4], /!important/i);
     });
   } finally {
+    monitorStateService.resetForTests();
     Object.assign(cashRepository, originalRepository);
     authService.getUserBySessionToken = originalGetUser;
     cashService.cancelSale = originalCancelService;

@@ -77,7 +77,9 @@
 }
 
 .monitor-hint[hidden],
-.account-result[hidden] {
+.account-result[hidden],
+.monitor-pairing-card[hidden],
+.monitor-pairing-status[hidden] {
   display: none;
 }
 
@@ -129,6 +131,7 @@
   width: min(calc(100% - 3rem), 1500px);
   margin: 0 auto;
   align-items: start;
+  gap: 0.85rem;
 }
 
 .monitor-mode {
@@ -137,6 +140,80 @@
 
 .monitor-mode[hidden] {
   display: none;
+}
+
+.monitor-pairing-card,
+.monitor-pairing-status {
+  border: 1px solid var(--monitor-line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(21, 48, 87, 0.05);
+}
+
+.monitor-pairing-card {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.7fr) minmax(360px, 1fr) minmax(180px, 0.35fr);
+  align-items: end;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+}
+
+.monitor-pairing-copy h1 {
+  margin-bottom: 0.15rem;
+  color: var(--monitor-navy);
+  font-size: 1.15rem;
+}
+
+.monitor-pairing-copy p,
+.monitor-pairing-form label {
+  margin: 0;
+  color: #60718b;
+  font-size: 0.82rem;
+}
+
+.monitor-pairing-form {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.monitor-pairing-form > div {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(130px, 0.38fr);
+  gap: 0.65rem;
+}
+
+.monitor-pairing-form input {
+  height: 56px;
+  margin: 0;
+  border: 2px solid #afcaef;
+  color: var(--monitor-navy);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.monitor-pairing-form .monitor-primary-action {
+  min-height: 56px;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.95rem;
+}
+
+.monitor-pairing-card > .monitor-message {
+  margin: 0;
+  text-align: right;
+}
+
+.monitor-pairing-status {
+  display: flex;
+  align-items: center;
+  padding: 0.7rem 1rem;
+}
+
+.monitor-pairing-status span {
+  color: #40516d;
+  font-weight: 700;
 }
 
 .cpf-query-card,
@@ -554,6 +631,15 @@
     grid-template-columns: minmax(420px, 1.4fr) minmax(230px, 0.7fr);
   }
 
+  .monitor-pairing-card {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .monitor-pairing-card > .monitor-message {
+    text-align: left;
+  }
+
   .cpf-query-actions {
     grid-column: 1 / -1;
     grid-template-columns: 1fr 1fr;
@@ -597,6 +683,15 @@
     padding: 1rem;
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+
+  .monitor-pairing-card,
+  .monitor-pairing-status {
+    padding: 0.9rem;
+  }
+
+  .monitor-pairing-form > div {
+    grid-template-columns: 1fr;
   }
 
   .cpf-display {

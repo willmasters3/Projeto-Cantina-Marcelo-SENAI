@@ -18,6 +18,7 @@ router.use(requireAuth, requireRole(cashRoles));
 router.get('/session', cashController.getCurrentSession);
 router.post('/session/open', validateOpenSession, cashController.openSession);
 router.post('/session/close', validateCloseSession, cashController.closeSession);
+router.post('/monitor-pairing', cashController.createMonitorPairing);
 router.put('/monitor-state', monitorController.updateState);
 
 router.get('/products', cashController.searchProducts);

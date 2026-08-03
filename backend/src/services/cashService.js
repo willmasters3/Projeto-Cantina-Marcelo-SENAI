@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import authConfig from '../config/auth.js';
 import cashRepository from '../repositories/cashRepository.js';
+import monitorStateService from './monitorStateService.js';
 import {
   decimalFactor,
   formatFixedDecimal,
@@ -97,6 +98,25 @@ const openSession = async (payload, user) => {
   }
 };
 
+const createMonitorPairing = async (payload = {}) => {
+  const session = await cashRepository.findOpenSession(terminalCode);
+  if (!session) {
+    throw new HttpError(409, 'Abra o caixa antes de abrir o Monitor da Cantina');
+  }
+
+  const sessionTerminal = monitorStateService.normalizeTerminal(
+    session.terminal_codigo || terminalCode
+  );
+  const requestedTerminal = monitorStateService.normalizeTerminal(
+    payload?.terminal || sessionTerminal
+  );
+  if (requestedTerminal !== sessionTerminal) {
+    throw new HttpError(409, 'A chave deve ser gerada para o caixa em operação');
+  }
+
+  return monitorStateService.createPairingToken(sessionTerminal);
+};
+
 const closeSession = async (payload, user) => {
   const informedAmount = normalizeAmount(
     payload.valor_fechamento_informado,
@@ -107,7 +127,7 @@ const closeSession = async (payload, user) => {
   const notes = normalizeOptionalText(payload.observacoes);
 
   try {
-    return await cashRepository.withTransaction(async (connection) => {
+    const closedSession = await cashRepository.withTransaction(async (connection) => {
       const session = await cashRepository.findOpenSession(terminalCode, connection, true);
       if (!session) throw new HttpError(409, 'Não existe caixa aberto para fechamento');
 
@@ -128,6 +148,8 @@ const closeSession = async (payload, user) => {
       if (!affectedRows) throw new HttpError(409, 'O caixa já foi fechado');
       return cashRepository.findSessionById(session.id, connection);
     });
+    monitorStateService.releaseTerminal(terminalCode);
+    return closedSession;
   } catch (error) {
     const isUnsignedDifferenceError = error?.code === 'ER_DATA_OUT_OF_RANGE'
       && /valor_fechamento_informado.*valor_fechamento_esperado/.test(String(error.message));
@@ -479,6 +501,7 @@ const cancelSale = async (saleIdValue, payload, user) => {
 export default {
   cancelSale,
   closeSession,
+  createMonitorPairing,
   createSale,
   getCurrentSession,
   getProductByBarcode,
