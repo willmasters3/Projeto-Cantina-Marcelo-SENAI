@@ -79,7 +79,8 @@
 .monitor-hint[hidden],
 .account-result[hidden],
 .monitor-pairing-card[hidden],
-.monitor-pairing-status[hidden] {
+.monitor-pairing-status[hidden],
+.monitor-fullscreen-prompt[hidden] {
   display: none;
 }
 
@@ -143,7 +144,8 @@
 }
 
 .monitor-pairing-card,
-.monitor-pairing-status {
+.monitor-pairing-status,
+.monitor-fullscreen-prompt {
   border: 1px solid var(--monitor-line);
   border-radius: 12px;
   background: #fff;
@@ -214,6 +216,27 @@
 .monitor-pairing-status span {
   color: #40516d;
   font-weight: 700;
+}
+
+.monitor-fullscreen-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.monitor-fullscreen-prompt span {
+  color: var(--monitor-blue-dark);
+  font-weight: 800;
+}
+
+.monitor-fullscreen-prompt .monitor-primary-action {
+  min-height: 48px;
+  padding: 0.6rem 1rem;
+  font-size: 0.95rem;
 }
 
 .cpf-query-card,
@@ -686,12 +709,18 @@
   }
 
   .monitor-pairing-card,
-  .monitor-pairing-status {
+  .monitor-pairing-status,
+  .monitor-fullscreen-prompt {
     padding: 0.9rem;
   }
 
   .monitor-pairing-form > div {
     grid-template-columns: 1fr;
+  }
+
+  .monitor-fullscreen-prompt {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .cpf-display {

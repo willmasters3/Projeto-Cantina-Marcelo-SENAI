@@ -32,6 +32,8 @@ const pairingButton = document.getElementById('pairingButton');
 const pairingMessage = document.getElementById('pairingMessage');
 const pairingStatus = document.getElementById('pairingStatus');
 const pairedTerminal = document.getElementById('pairedTerminal');
+const fullscreenPrompt = document.getElementById('fullscreenPrompt');
+const fullscreenButton = document.getElementById('fullscreenButton');
 
 const accountTimeoutMilliseconds = 30_000;
 const pairingStorageKey = 'cantina.monitor.pairing';
@@ -40,6 +42,10 @@ let accountRequestSequence = 0;
 let currentMode = 'CONSULTA';
 let monitorEvents = null;
 let activePairing = null;
+
+const updateFullscreenPrompt = () => {
+  fullscreenPrompt.hidden = !activePairing || Boolean(document.fullscreenElement);
+};
 
 bindCpfInput(accountCpf);
 
@@ -103,8 +109,10 @@ const requestMonitorFullscreen = async () => {
   if (document.fullscreenElement || !document.documentElement.requestFullscreen) return false;
   try {
     await document.documentElement.requestFullscreen();
+    updateFullscreenPrompt();
     return true;
   } catch {
+    updateFullscreenPrompt();
     return false;
   }
 };
@@ -115,6 +123,8 @@ const exitMonitorFullscreen = async () => {
     await document.exitFullscreen();
   } catch {
     // Browser may deny the exit request; the user can still press Esc if a keyboard exists.
+  } finally {
+    updateFullscreenPrompt();
   }
 };
 
@@ -311,6 +321,7 @@ const disconnectMonitor = (message = 'Monitor desconectado.', isError = true) =>
   closeMonitorEvents();
   clearStoredPairing();
   activePairing = null;
+  updateFullscreenPrompt();
   showAccountMode();
   renderPairingState();
   showPairingMessage(message, isError);
@@ -322,6 +333,7 @@ const connectMonitorEvents = (pairing) => {
   activePairing = pairing;
   savePairing(pairing);
   renderPairingState();
+  updateFullscreenPrompt();
   showPairingMessage(`Monitor vinculado ao ${pairing.terminal}.`);
   const params = new URLSearchParams({ token: pairing.token });
   monitorEvents = new EventSource(`/api/v1/monitor/events?${params.toString()}`);
@@ -397,6 +409,12 @@ pairingToken.addEventListener('input', () => {
   pairingToken.value = normalizePairingToken(pairingToken.value).slice(0, 8);
   showPairingMessage();
 });
+
+fullscreenButton.addEventListener('click', () => {
+  void requestMonitorFullscreen();
+});
+
+document.addEventListener('fullscreenchange', updateFullscreenPrompt);
 
 const restoreStoredPairing = async () => {
   const storedPairing = loadStoredPairing();
@@ -485,4 +503,5 @@ const updateClock = () => {
 updateClock();
 setInterval(updateClock, 1000);
 showAccountMode();
+updateFullscreenPrompt();
 void restoreStoredPairing();
