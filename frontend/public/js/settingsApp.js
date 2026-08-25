@@ -1,6 +1,8 @@
+import authApi from './authApi.js';
 import settingsApi from './settingsApi.js';
 
 const settingsMessage = document.getElementById('settingsMessage');
+const adminSettingsElements = document.querySelectorAll('[data-admin-settings]');
 const summaryActiveUsers = document.getElementById('summaryActiveUsers');
 const summaryAdmins = document.getElementById('summaryAdmins');
 const summaryTerminal = document.getElementById('summaryTerminal');
@@ -72,6 +74,25 @@ const systemTerminal = document.getElementById('systemTerminal');
 const systemLastBackup = document.getElementById('systemLastBackup');
 const systemAutoBackup = document.getElementById('systemAutoBackup');
 
+const aboutSystemName = document.getElementById('aboutSystemName');
+const aboutSystemDescription = document.getElementById('aboutSystemDescription');
+const aboutSystemVersion = document.getElementById('aboutSystemVersion');
+const aboutDeveloperName = document.getElementById('aboutDeveloperName');
+const aboutDeveloperEmailLink = document.getElementById('aboutDeveloperEmail');
+const aboutDeveloperEmailText = document.getElementById('aboutDeveloperEmailText');
+const aboutDeveloperLinkedinLink = document.getElementById('aboutDeveloperLinkedin');
+const aboutDeveloperLinkedinText = document.getElementById('aboutDeveloperLinkedinText');
+const aboutDeveloperYear = document.getElementById('aboutDeveloperYear');
+const aboutDeveloperCopyright = document.getElementById('aboutDeveloperCopyright');
+const licenseOwner = document.getElementById('licenseOwner');
+const licenseInstallationId = document.getElementById('licenseInstallationId');
+const licenseVersion = document.getElementById('licenseVersion');
+const licenseDeliveryDate = document.getElementById('licenseDeliveryDate');
+const licenseTechnicalValidUntil = document.getElementById('licenseTechnicalValidUntil');
+const licenseStatus = document.getElementById('licenseStatus');
+const licenseText = document.getElementById('licenseText');
+const licenseFooterCopyright = document.getElementById('licenseFooterCopyright');
+
 const generateBackupButton = document.getElementById('generateBackupButton');
 const autoBackupForm = document.getElementById('autoBackupForm');
 const autoBackupEnabled = document.getElementById('autoBackupEnabled');
@@ -133,6 +154,23 @@ const formatDateTime = (value) => {
     dateStyle: 'short',
     timeStyle: 'short'
   });
+};
+
+const formatPublicValue = (value) => {
+  const normalized = String(value || '').trim();
+  return normalized || 'Não informado';
+};
+
+const formatLicenseDate = (value) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return 'Não informado';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return normalized;
+  const date = new Date(`${normalized}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? normalized : date.toLocaleDateString('pt-BR');
+};
+
+const setText = (element, value) => {
+  if (element) element.textContent = formatPublicValue(value);
 };
 
 const formatBytes = (value) => {
@@ -349,6 +387,58 @@ const applyOverview = (overview) => {
 const loadOverview = async () => {
   const overview = await settingsApi.getOverview();
   applyOverview(overview);
+};
+
+const renderAboutLicense = (aboutLicense) => {
+  const system = aboutLicense?.sistema || {};
+  const developer = aboutLicense?.desenvolvedor || {};
+  const license = aboutLicense?.licenca || {};
+
+  setText(aboutSystemName, system.nome);
+  setText(aboutSystemDescription, system.descricao);
+  setText(aboutSystemVersion, system.versao);
+  setText(aboutDeveloperName, developer.nome);
+  setText(aboutDeveloperYear, developer.ano);
+  setText(aboutDeveloperCopyright, developer.direitos_autorais);
+  setText(licenseOwner, license.licenciado_para);
+  setText(licenseInstallationId, license.identificacao_instalacao);
+  setText(licenseVersion, license.versao_licenciada);
+  setText(licenseDeliveryDate, formatLicenseDate(license.data_entrega));
+  setText(licenseTechnicalValidUntil, formatLicenseDate(license.validade_tecnica_versao));
+  setText(licenseStatus, license.situacao);
+  setText(licenseFooterCopyright, developer.direitos_autorais);
+
+  const email = String(developer.email || '').trim();
+  if (aboutDeveloperEmailLink && aboutDeveloperEmailText) {
+    aboutDeveloperEmailText.textContent = formatPublicValue(email);
+    if (email) {
+      aboutDeveloperEmailLink.href = `mailto:${email}`;
+      aboutDeveloperEmailLink.removeAttribute('aria-disabled');
+    } else {
+      aboutDeveloperEmailLink.removeAttribute('href');
+      aboutDeveloperEmailLink.setAttribute('aria-disabled', 'true');
+    }
+  }
+
+  const linkedin = String(developer.linkedin || '').trim();
+  if (aboutDeveloperLinkedinLink && aboutDeveloperLinkedinText) {
+    aboutDeveloperLinkedinText.textContent = formatPublicValue(linkedin);
+    if (linkedin) {
+      aboutDeveloperLinkedinLink.href = linkedin;
+      aboutDeveloperLinkedinLink.removeAttribute('aria-disabled');
+    } else {
+      aboutDeveloperLinkedinLink.removeAttribute('href');
+      aboutDeveloperLinkedinLink.setAttribute('aria-disabled', 'true');
+    }
+  }
+
+  if (licenseText) {
+    licenseText.textContent = formatPublicValue(license.texto);
+  }
+};
+
+const loadAboutLicense = async () => {
+  renderAboutLicense(await settingsApi.getAboutLicense());
 };
 
 const openAddUserDialog = () => {
@@ -695,19 +785,47 @@ const loadAudit = async () => {
   renderAudit(await settingsApi.listAudit({ limit: auditLimit, offset: auditOffset }));
 };
 
+const activateSettingsTab = (panelId) => {
+  document.querySelectorAll('[data-settings-tab]').forEach((tab) => {
+    const active = tab.dataset.settingsTab === panelId;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', String(active));
+  });
+  document.querySelectorAll('.settings-tab-panel').forEach((panel) => {
+    const active = panel.id === panelId;
+    panel.hidden = !active;
+    panel.classList.toggle('active', active);
+  });
+};
+
+const getInitialTabPanel = () => {
+  const params = new URLSearchParams(window.location.search);
+  const requestedTab = (params.get('tab') || window.location.hash.slice(1)).trim().toLowerCase();
+  const tabAliases = new Map([
+    ['usuarios', 'usersPanel'],
+    ['usuarios-permissoes', 'usersPanel'],
+    ['terminal', 'terminalPanel'],
+    ['terminal-monitor', 'terminalPanel'],
+    ['seguranca', 'securityPanel'],
+    ['seguranca-backup', 'securityPanel'],
+    ['sobre-licenca', 'aboutLicensePanel'],
+    ['sobre-e-licenca', 'aboutLicensePanel'],
+    ['about-license', 'aboutLicensePanel']
+  ]);
+  return tabAliases.get(requestedTab) || 'usersPanel';
+};
+
+const configureSettingsAccess = (roleSlug) => {
+  const isAdmin = roleSlug === 'ADMINISTRADOR';
+  adminSettingsElements.forEach((element) => {
+    element.hidden = !isAdmin;
+  });
+  return isAdmin;
+};
+
 document.querySelectorAll('[data-settings-tab]').forEach((button) => {
   button.addEventListener('click', () => {
-    const panelId = button.dataset.settingsTab;
-    document.querySelectorAll('[data-settings-tab]').forEach((tab) => {
-      const active = tab === button;
-      tab.classList.toggle('active', active);
-      tab.setAttribute('aria-selected', String(active));
-    });
-    document.querySelectorAll('.settings-tab-panel').forEach((panel) => {
-      const active = panel.id === panelId;
-      panel.hidden = !active;
-      panel.classList.toggle('active', active);
-    });
+    activateSettingsTab(button.dataset.settingsTab);
   });
 });
 
@@ -1077,15 +1195,21 @@ auditNextButton.addEventListener('click', async () => {
 const initializeSettings = async () => {
   try {
     showMessage('Carregando configurações...');
-    await loadRoles();
-    await Promise.all([
-      loadUsers(),
-      loadOverview(),
-      loadTerminalMonitor(),
-      loadBackupSettings(),
-      loadBackups(),
-      loadAudit()
-    ]);
+    const { user } = await authApi.me();
+    const isAdmin = configureSettingsAccess(user.role.slug);
+    activateSettingsTab(isAdmin ? getInitialTabPanel() : 'aboutLicensePanel');
+    await loadAboutLicense();
+    if (isAdmin) {
+      await loadRoles();
+      await Promise.all([
+        loadUsers(),
+        loadOverview(),
+        loadTerminalMonitor(),
+        loadBackupSettings(),
+        loadBackups(),
+        loadAudit()
+      ]);
+    }
     showMessage();
   } catch (error) {
     showMessage(error.message || 'Não foi possível carregar as configurações.', true);

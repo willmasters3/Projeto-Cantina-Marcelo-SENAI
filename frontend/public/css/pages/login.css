@@ -28,3 +28,9 @@
   display: inline-block;
   margin-top: var(--space-2);
 }
+
+.auth-credit-footer {
+  width: 100%;
+  margin: var(--space-6) 0 0;
+  padding-top: var(--space-4);
+}

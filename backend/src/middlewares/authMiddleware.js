@@ -2,12 +2,19 @@ import authService from '../services/authService.js';
 import HttpError from '../utils/httpError.js';
 import authConfig from '../config/auth.js';
 
+const redirectToLogin = (req, res) => {
+  const redirectTo = req.originalUrl?.startsWith('/app/')
+    ? `?redirectTo=${encodeURIComponent(req.originalUrl)}`
+    : '';
+  return res.redirect(`/login${redirectTo}`);
+};
+
 const requireAuth = async (req, res, next) => {
   try {
     const token = req.cookies?.[authConfig.cookieName] || null;
     if (!token) {
       if (req.originalUrl.startsWith('/app')) {
-        return res.redirect('/login');
+        return redirectToLogin(req, res);
       }
       throw new HttpError(401, 'Autenticação necessária');
     }
@@ -16,7 +23,7 @@ const requireAuth = async (req, res, next) => {
     if (!user) {
       res.clearCookie(authConfig.cookieName, { path: '/' });
       if (req.originalUrl.startsWith('/app')) {
-        return res.redirect('/login');
+        return redirectToLogin(req, res);
       }
       throw new HttpError(401, 'Autenticação necessária');
     }

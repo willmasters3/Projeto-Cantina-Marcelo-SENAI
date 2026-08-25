@@ -17,9 +17,25 @@ const pagePermissions = [
   ['estoque', [authConfig.roles.admin]],
   ['clientes', [authConfig.roles.admin, authConfig.roles.cashier]],
   ['fiado', [authConfig.roles.admin, authConfig.roles.cashier]],
-  ['relatorios', [authConfig.roles.admin, authConfig.roles.viewer]],
-  ['configuracoes', [authConfig.roles.admin]]
+  ['relatorios', [authConfig.roles.admin, authConfig.roles.viewer]]
 ];
+
+const publicSettingsTabs = new Set(['sobre-licenca', 'sobre-e-licenca', 'about-license']);
+
+router.get(
+  '/app/configuracoes',
+  requireAuth,
+  (req, res, next) => {
+    const requestedTab = String(req.query?.tab || '').trim().toLowerCase();
+    if (
+      req.user?.role?.slug === authConfig.roles.admin
+      || publicSettingsTabs.has(requestedTab)
+    ) {
+      return pageController.appPage('configuracoes')(req, res, next);
+    }
+    return requireRole([authConfig.roles.admin])(req, res, next);
+  }
+);
 
 pagePermissions.forEach(([page, roles]) => {
   router.get(

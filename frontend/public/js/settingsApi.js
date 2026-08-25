@@ -30,6 +30,7 @@ const buildQuery = (params = {}) => {
 };
 
 const getOverview = async () => request('/overview');
+const getAboutLicense = async () => request('/about-license');
 const listRoles = async () => request('/roles');
 const listUsers = async (filters = {}) => request(`/users${buildQuery(filters)}`);
 const createUser = async (payload) => request('/users', {
@@ -111,6 +112,7 @@ export default {
   generateBackup,
   getBackupDownloadUrl,
   getBackupSettings,
+  getAboutLicense,
   getOverview,
   getTerminalMonitor,
   listAudit,

@@ -18,6 +18,27 @@
   margin-bottom: var(--space-6);
 }
 
+.app-credit-footer {
+  width: min(100% - 3rem, var(--content-width));
+  margin: calc(-1 * var(--space-10)) auto var(--space-5);
+  padding-top: var(--space-4);
+  border-top: var(--border-width) solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-align: center;
+}
+
+.app-credit-footer a {
+  color: var(--color-text-subtle);
+  text-decoration: none;
+}
+
+.app-credit-footer a:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
 /* Keep this value aligned with --breakpoint-mobile; CSS variables are invalid in media conditions. */
 @media (max-width: 760px) {
   .admin-layout {
@@ -27,5 +48,10 @@
   .page-content {
     width: min(100% - 2rem, var(--content-width));
     padding-top: var(--space-6);
+  }
+
+  .app-credit-footer {
+    width: min(100% - 2rem, var(--content-width));
+    margin-top: calc(-1 * var(--space-8));
   }
 }

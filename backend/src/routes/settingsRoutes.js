@@ -7,10 +7,11 @@ import { requireAuth, requireRole } from '../middlewares/authMiddleware.js';
 
 const router = Router();
 
-router.use(
-  requireAuth,
-  requireRole([authConfig.roles.admin], 'Você não tem permissão para acessar Configurações.')
-);
+router.use(requireAuth);
+
+router.get('/about-license', settingsController.getAboutLicense);
+
+router.use(requireRole([authConfig.roles.admin], 'Você não tem permissão para acessar Configurações.'));
 
 router.get('/overview', settingsController.getOverview);
 router.get('/roles', settingsController.listRoles);

@@ -10,7 +10,26 @@ const showMessage = (text, isError = false) => {
   message.className = isError ? 'message error' : 'message success';
 };
 
+const getSafeRedirectTo = () => {
+  const redirectTo = new URLSearchParams(window.location.search).get('redirectTo');
+  if (!redirectTo) return null;
+  try {
+    const targetUrl = new URL(redirectTo, window.location.origin);
+    if (targetUrl.origin !== window.location.origin || !targetUrl.pathname.startsWith('/app/')) {
+      return null;
+    }
+    return `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
+  } catch {
+    return null;
+  }
+};
+
 const redirectAuthenticatedUser = (roleSlug) => {
+  const redirectTo = getSafeRedirectTo();
+  if (redirectTo) {
+    window.location.replace(redirectTo);
+    return;
+  }
   window.location.replace(roleSlug === 'CONSULTA' ? '/app/relatorios' : '/app/caixa');
 };
 
@@ -36,7 +55,7 @@ form.addEventListener('submit', async (event) => {
       password: passwordInput.value
     });
     passwordInput.value = '';
-    window.location.replace(result.redirectTo);
+    window.location.replace(getSafeRedirectTo() || result.redirectTo);
   } catch (error) {
     passwordInput.value = '';
     showMessage(error.status === 429

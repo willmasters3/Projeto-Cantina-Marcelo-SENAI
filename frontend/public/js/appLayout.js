@@ -221,6 +221,24 @@ const showAccessDeniedNotice = () => {
   setTimeout(() => notice.remove(), 7000);
 };
 
+const createCreditFooter = () => {
+  const mainContent = document.querySelector('.main-content');
+  if (!mainContent || mainContent.querySelector('.app-credit-footer')) return;
+
+  const footer = document.createElement('footer');
+  footer.className = 'app-credit-footer';
+  const systemName = document.createElement('span');
+  systemName.textContent = 'Sistema Cantina';
+  const separator = document.createElement('span');
+  separator.setAttribute('aria-hidden', 'true');
+  separator.textContent = '•';
+  const creditLink = document.createElement('a');
+  creditLink.href = '/app/configuracoes?tab=sobre-licenca';
+  creditLink.textContent = 'Desenvolvido por William Pereira do Nascimento';
+  footer.append(systemName, ' ', separator, ' ', creditLink);
+  mainContent.appendChild(footer);
+};
+
 const createLogoutConfirmation = () => {
   const dialog = document.createElement('dialog');
   dialog.className = 'logout-confirmation-modal';
@@ -294,6 +312,7 @@ const initHeader = async () => {
     currentRoleSlug = user.role.slug;
     configureNavigation(user.role.slug);
     configureOperatorShell(user);
+    createCreditFooter();
     showAccessDeniedNotice();
     logoutButton.disabled = false;
   } catch (error) {

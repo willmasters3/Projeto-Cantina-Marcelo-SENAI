@@ -33,7 +33,7 @@
         <h1>Configurações</h1>
         <p id="settingsMessage" class="message" aria-live="polite"></p>
 
-        <div class="settings-summary-grid" aria-label="Resumo das configurações">
+        <div class="settings-summary-grid" aria-label="Resumo das configurações" data-admin-settings>
           <article class="settings-summary-card">
             <span class="settings-summary-icon blue" aria-hidden="true">U</span>
             <div>
@@ -69,18 +69,21 @@
         </div>
 
         <div class="settings-tabs" role="tablist" aria-label="Áreas de configuração">
-          <button id="usersTab" class="active" type="button" role="tab" aria-selected="true" data-settings-tab="usersPanel">
+          <button id="usersTab" class="active" type="button" role="tab" aria-selected="true" data-settings-tab="usersPanel" data-admin-settings>
             Usuários e permissões
           </button>
-          <button id="terminalTab" type="button" role="tab" aria-selected="false" data-settings-tab="terminalPanel">
+          <button id="terminalTab" type="button" role="tab" aria-selected="false" data-settings-tab="terminalPanel" data-admin-settings>
             Terminal e monitor
           </button>
-          <button id="securityTab" type="button" role="tab" aria-selected="false" data-settings-tab="securityPanel">
+          <button id="securityTab" type="button" role="tab" aria-selected="false" data-settings-tab="securityPanel" data-admin-settings>
             Segurança e backup
+          </button>
+          <button id="aboutLicenseTab" type="button" role="tab" aria-selected="false" data-settings-tab="aboutLicensePanel">
+            Sobre e licença
           </button>
         </div>
 
-        <section id="usersPanel" class="settings-tab-panel active" role="tabpanel" aria-labelledby="usersTab">
+        <section id="usersPanel" class="settings-tab-panel active" role="tabpanel" aria-labelledby="usersTab" data-admin-settings>
           <div class="settings-panel">
             <div class="settings-panel-header">
               <div>
@@ -126,7 +129,7 @@
           </div>
         </section>
 
-        <section id="terminalPanel" class="settings-tab-panel" role="tabpanel" aria-labelledby="terminalTab" hidden>
+        <section id="terminalPanel" class="settings-tab-panel" role="tabpanel" aria-labelledby="terminalTab" hidden data-admin-settings>
           <div class="settings-two-column">
             <section class="settings-panel" aria-labelledby="terminalTitle">
               <div class="settings-panel-header">
@@ -239,7 +242,7 @@
           </div>
         </section>
 
-        <section id="securityPanel" class="settings-tab-panel" role="tabpanel" aria-labelledby="securityTab" hidden>
+        <section id="securityPanel" class="settings-tab-panel" role="tabpanel" aria-labelledby="securityTab" hidden data-admin-settings>
           <div class="settings-two-column security-grid">
             <section class="settings-panel" aria-labelledby="passwordTitle">
               <div class="settings-panel-header">
@@ -377,6 +380,93 @@
               <button id="auditNextButton" class="secondary-action compact-button" type="button">Próxima</button>
             </div>
           </section>
+        </section>
+
+        <section id="aboutLicensePanel" class="settings-tab-panel" role="tabpanel" aria-labelledby="aboutLicenseTab" hidden>
+          <div class="settings-panel about-license-intro">
+            <div class="settings-panel-header">
+              <div>
+                <h2>Sobre e licença</h2>
+                <p>Informações do sistema, identificação do desenvolvedor e licença local desta instalação.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="about-license-grid">
+            <article class="settings-panel about-license-card" aria-labelledby="developerInfoTitle">
+              <div class="settings-panel-header">
+                <div>
+                  <h2 id="developerInfoTitle">Sistema e desenvolvedor</h2>
+                  <p>Dados informativos protegidos contra alteração pela interface.</p>
+                </div>
+              </div>
+              <dl class="system-info-list about-info-list">
+                <div><dt>Sistema</dt><dd id="aboutSystemName">--</dd></div>
+                <div><dt>Descrição</dt><dd id="aboutSystemDescription">--</dd></div>
+                <div><dt>Versão instalada</dt><dd id="aboutSystemVersion">--</dd></div>
+                <div><dt>Desenvolvedor</dt><dd id="aboutDeveloperName">--</dd></div>
+                <div>
+                  <dt>E-mail</dt>
+                  <dd>
+                    <a id="aboutDeveloperEmail" class="settings-contact-link" href="#">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 6h16v12H4z"></path>
+                        <path d="m4 7 8 6 8-6"></path>
+                      </svg>
+                      <span id="aboutDeveloperEmailText">--</span>
+                    </a>
+                  </dd>
+                </div>
+                <div>
+                  <dt>LinkedIn</dt>
+                  <dd>
+                    <a id="aboutDeveloperLinkedin" class="settings-contact-link" href="#" target="_blank" rel="noopener noreferrer">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M6 9v10"></path>
+                        <path d="M6 5v.01"></path>
+                        <path d="M10 19V9"></path>
+                        <path d="M10 13c0-2.2 1.4-4 3.7-4 2.1 0 3.3 1.4 3.3 4v6"></path>
+                      </svg>
+                      <span id="aboutDeveloperLinkedinText">--</span>
+                    </a>
+                  </dd>
+                </div>
+                <div><dt>Ano</dt><dd id="aboutDeveloperYear">--</dd></div>
+                <div><dt>Direitos autorais</dt><dd id="aboutDeveloperCopyright">--</dd></div>
+              </dl>
+            </article>
+
+            <article class="settings-panel about-license-card" aria-labelledby="licenseInfoTitle">
+              <div class="settings-panel-header">
+                <div>
+                  <h2 id="licenseInfoTitle">Informações da licença</h2>
+                  <p>Dados definidos no ambiente local da instalação entregue.</p>
+                </div>
+              </div>
+              <dl class="system-info-list about-info-list">
+                <div><dt>Licenciado para</dt><dd id="licenseOwner">--</dd></div>
+                <div><dt>Identificação da instalação</dt><dd id="licenseInstallationId">--</dd></div>
+                <div><dt>Versão licenciada</dt><dd id="licenseVersion">--</dd></div>
+                <div><dt>Data da entrega</dt><dd id="licenseDeliveryDate">--</dd></div>
+                <div><dt>Validade técnica da versão</dt><dd id="licenseTechnicalValidUntil">--</dd></div>
+                <div><dt>Situação da licença</dt><dd id="licenseStatus">--</dd></div>
+              </dl>
+            </article>
+          </div>
+
+          <section class="settings-panel license-text-panel" aria-labelledby="licenseTextTitle">
+            <div class="settings-panel-header">
+              <div>
+                <h2 id="licenseTextTitle">Licença de uso</h2>
+                <p>Texto integral carregado do arquivo de licença do pacote.</p>
+              </div>
+            </div>
+            <pre id="licenseText" class="license-text">Carregando licença...</pre>
+          </section>
+
+          <footer id="licenseFooterCopyright" class="settings-license-footer">
+            © 2026 William Pereira do Nascimento. Todos os direitos reservados.
+          </footer>
         </section>
       </section>
 

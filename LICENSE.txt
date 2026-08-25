@@ -1,0 +1,46 @@
+Sistema Cantina
+Sistema de controle de vendas, estoque, clientes e fiado.
+
+Desenvolvedor: William Pereira do Nascimento
+E-mail: william_pereiranascimento@hotmail.com
+LinkedIn: https://www.linkedin.com/in/william-pereira-do-nascimento-83087261/
+Ano: 2026
+Direitos autorais: © 2026 William Pereira do Nascimento. Todos os direitos reservados.
+
+Os dados específicos do licenciado, da instalação entregue, da data de entrega e da validade técnica da versão são configurados localmente no arquivo de ambiente da instalação.
+
+# LICENÇA DE USO DO SISTEMA CANTINA
+
+Este software é licenciado, e não vendido. A presente licença concede ao adquirente identificado neste sistema o direito de utilizar esta versão do Sistema Cantina exclusivamente em suas atividades internas e no estabelecimento licenciado.
+
+Os funcionários e usuários internos autorizados pelo licenciado poderão utilizar o sistema em nome do estabelecimento, respeitando os perfis e permissões cadastrados. Essa autorização não permite disponibilizar o sistema para terceiros.
+
+A licença é pessoal, não exclusiva e intransferível, válida somente para o licenciado, a versão e a instalação identificados neste sistema.
+
+A substituição do computador poderá ser realizada mediante autorização do desenvolvedor, desde que a instalação anterior deixe de ser utilizada. A licença não permite manter simultaneamente o sistema instalado em outros computadores, unidades ou estabelecimentos sem autorização específica.
+
+É expressamente proibido, sem autorização prévia e por escrito do desenvolvedor:
+
+* Vender ou revender o sistema.
+* Sublicenciar, alugar, emprestar, doar ou transferir a licença.
+* Distribuir, publicar ou disponibilizar o sistema, seu instalador ou seus arquivos a terceiros.
+* Copiar o sistema para utilização por outra pessoa, empresa, unidade ou estabelecimento.
+* Disponibilizar ou distribuir o código-fonte a terceiros.
+* Permitir que terceiros explorem comercialmente esta versão.
+* Remover, alterar ou ocultar os avisos de autoria, licença ou direitos autorais.
+
+É permitida a criação de cópias de segurança exclusivamente para proteção dos dados e recuperação da instalação licenciada. Essas cópias não poderão ser utilizadas para criar instalações adicionais ou fornecer o sistema a terceiros.
+
+A disponibilização técnica dos arquivos necessários ao funcionamento do sistema não representa transferência da titularidade do código-fonte, da propriedade intelectual ou dos direitos de comercialização.
+
+Todos os direitos autorais e de comercialização do Sistema Cantina permanecem pertencentes ao desenvolvedor William Pereira do Nascimento.
+
+Esta licença refere-se exclusivamente à versão identificada no sistema. Novas versões, funcionalidades, instalações adicionais, adaptações e serviços futuros não estão automaticamente incluídos, salvo quando expressamente acordados.
+
+Para suporte, autorização de reinstalação ou informações sobre a licença, entre em contato:
+
+William Pereira do Nascimento
+E-mail: william_pereiranascimento@hotmail.com
+LinkedIn: https://www.linkedin.com/in/william-pereira-do-nascimento-83087261/
+
+© 2026 William Pereira do Nascimento. Todos os direitos reservados.

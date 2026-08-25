@@ -32,6 +32,14 @@ const getOverview = async (req, res, next) => {
   }
 };
 
+const getAboutLicense = async (req, res, next) => {
+  try {
+    res.status(200).json({ data: await settingsService.getAboutLicense() });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const listRoles = async (req, res, next) => {
   try {
     res.status(200).json({ data: await settingsService.listRoles() });
@@ -289,6 +297,7 @@ export default {
   deleteBackup,
   downloadBackup,
   generateBackup,
+  getAboutLicense,
   getBackupSettings,
   getOverview,
   getTerminalMonitor,

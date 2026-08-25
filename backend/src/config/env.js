@@ -32,6 +32,12 @@ const env = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME
+  },
+  license: {
+    licensedTo: process.env.SOFTWARE_LICENSED_TO || '',
+    installationId: process.env.SOFTWARE_INSTALLATION_ID || '',
+    deliveryDate: process.env.SOFTWARE_DELIVERY_DATE || '',
+    technicalValidUntil: process.env.SOFTWARE_TECHNICAL_VALID_UNTIL || ''
   }
 };
 

@@ -2,8 +2,11 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import authConfig from '../config/auth.js';
+import env from '../config/env.js';
 import monitorAssetsConfig from '../config/monitorAssets.js';
+import softwareInfo from '../config/softwareInfo.js';
 import { testConnection } from '../config/database.js';
 import auditRepository from '../repositories/auditRepository.js';
 import authSessionsRepository from '../repositories/authSessionsRepository.js';
@@ -16,7 +19,11 @@ import monitorStateService from './monitorStateService.js';
 import HttpError from '../utils/httpError.js';
 
 const require = createRequire(import.meta.url);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const backendPackage = require('../../package.json');
+const licenseFilePath = path.resolve(__dirname, '../../../LICENSE.txt');
+const licenseSectionTitle = '# LICENÇA DE USO DO SISTEMA CANTINA';
 
 const manageableRoles = [authConfig.roles.admin, authConfig.roles.cashier];
 const generatedScreensaverPattern = /^screensaver-[a-f0-9]{12}\.(?:jpg|png|webp)$/;
@@ -126,6 +133,50 @@ const applyDefaults = (rows = {}) => ({
 const getSettings = async (executor = undefined) => {
   const rows = await settingsRepository.getSettings(Object.values(settingKeys), executor);
   return applyDefaults(rows);
+};
+
+const getPackageVersion = () => String(backendPackage.version || '').trim() || 'Não informado';
+
+const normalizeLicenseField = (value) => {
+  const normalized = String(value || '').trim();
+  return normalized || null;
+};
+
+const readLicenseText = async () => {
+  try {
+    const fileContent = (await fs.readFile(licenseFilePath, 'utf8')).trim();
+    const sectionStart = fileContent.indexOf(licenseSectionTitle);
+    return sectionStart >= 0 ? fileContent.slice(sectionStart).trim() : fileContent;
+  } catch {
+    return 'Licença de uso não disponível nesta instalação.';
+  }
+};
+
+const getAboutLicense = async () => {
+  const version = getPackageVersion();
+  return {
+    sistema: {
+      nome: softwareInfo.name,
+      descricao: softwareInfo.description,
+      versao: version
+    },
+    desenvolvedor: {
+      nome: softwareInfo.developer.name,
+      email: softwareInfo.developer.email,
+      linkedin: softwareInfo.developer.linkedin,
+      ano: softwareInfo.developer.year,
+      direitos_autorais: softwareInfo.developer.copyright
+    },
+    licenca: {
+      licenciado_para: normalizeLicenseField(env.license.licensedTo),
+      identificacao_instalacao: normalizeLicenseField(env.license.installationId),
+      versao_licenciada: version,
+      data_entrega: normalizeLicenseField(env.license.deliveryDate),
+      validade_tecnica_versao: normalizeLicenseField(env.license.technicalValidUntil),
+      situacao: softwareInfo.licenseStatus,
+      texto: await readLicenseText()
+    }
+  };
 };
 
 const toPublicImageUrl = (filename) => (
@@ -610,7 +661,7 @@ const getSystemInfo = async () => {
   }
 
   return {
-    versao: backendPackage.version || '0.1.0',
+    versao: getPackageVersion(),
     banco: databaseStatus,
     terminal_atual: settings.terminalDisplayName,
     ultimo_backup_sucesso_em: lastBackup?.concluido_em || null,
@@ -712,6 +763,7 @@ export {
 export default {
   changeOwnPassword,
   createUser,
+  getAboutLicense,
   getBackupSettings,
   getOverview,
   getPublicMonitorImage,
