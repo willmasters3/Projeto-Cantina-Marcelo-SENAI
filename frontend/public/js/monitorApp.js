@@ -34,14 +34,29 @@ const pairingStatus = document.getElementById('pairingStatus');
 const pairedTerminal = document.getElementById('pairedTerminal');
 const fullscreenPrompt = document.getElementById('fullscreenPrompt');
 const fullscreenButton = document.getElementById('fullscreenButton');
+const monitorScreensaver = document.getElementById('monitorScreensaver');
+const monitorScreensaverImage = document.getElementById('monitorScreensaverImage');
+const monitorScreensaverMessage = document.getElementById('monitorScreensaverMessage');
 
-const accountTimeoutMilliseconds = 30_000;
 const pairingStorageKey = 'cantina.monitor.pairing';
+const defaultMonitorSettings = {
+  privacyClearSeconds: 30,
+  screensaver: {
+    enabled: false,
+    idleSeconds: 60,
+    message: 'Toque na tela para consultar sua conta',
+    imageUrl: null
+  }
+};
+let accountTimeoutMilliseconds = defaultMonitorSettings.privacyClearSeconds * 1000;
+let screensaverSettings = { ...defaultMonitorSettings.screensaver };
 let accountTimeout = null;
+let screensaverTimeout = null;
 let accountRequestSequence = 0;
 let currentMode = 'CONSULTA';
 let monitorEvents = null;
 let activePairing = null;
+let screensaverVisible = false;
 
 const isEditableTarget = (target) => target instanceof Element
   && Boolean(target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])'));
@@ -54,6 +69,84 @@ document.addEventListener('selectstart', (event) => {
   if (isEditableTarget(event.target)) return;
   event.preventDefault();
 });
+
+const hideScreensaver = () => {
+  if (!screensaverVisible) return;
+  screensaverVisible = false;
+  monitorScreensaver.hidden = true;
+  monitorScreensaver.setAttribute('aria-hidden', 'true');
+};
+
+const clearScreensaverTimeout = () => {
+  if (screensaverTimeout) clearTimeout(screensaverTimeout);
+  screensaverTimeout = null;
+};
+
+const showScreensaver = () => {
+  if (!screensaverSettings.enabled || currentMode !== 'CONSULTA' || !activePairing) return;
+  clearSensitiveAccountData();
+  showAccountMessage();
+  monitorScreensaverMessage.textContent = screensaverSettings.message
+    || defaultMonitorSettings.screensaver.message;
+  if (screensaverSettings.imageUrl) {
+    monitorScreensaverImage.src = screensaverSettings.imageUrl;
+    monitorScreensaverImage.hidden = false;
+  } else {
+    monitorScreensaverImage.hidden = true;
+    monitorScreensaverImage.removeAttribute('src');
+  }
+  screensaverVisible = true;
+  monitorScreensaver.hidden = false;
+  monitorScreensaver.setAttribute('aria-hidden', 'false');
+};
+
+const scheduleScreensaver = () => {
+  clearScreensaverTimeout();
+  if (!screensaverSettings.enabled || currentMode !== 'CONSULTA' || !activePairing) return;
+  screensaverTimeout = setTimeout(showScreensaver, screensaverSettings.idleSeconds * 1000);
+};
+
+const handleMonitorActivity = (event) => {
+  if (screensaverVisible) {
+    event.preventDefault();
+    event.stopPropagation();
+    hideScreensaver();
+    returnToInitialAccountScreen();
+  }
+  scheduleAccountExpiration();
+  scheduleScreensaver();
+};
+
+const loadMonitorSettings = async () => {
+  try {
+    const response = await fetch('/api/v1/monitor/settings', {
+      headers: { Accept: 'application/json' }
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.error || 'Configurações indisponíveis');
+    const settings = payload?.data || {};
+    const privacyClearSeconds = Number(settings.privacy_clear_seconds);
+    const screensaverIdleSeconds = Number(settings.screensaver?.idle_seconds);
+    accountTimeoutMilliseconds = (
+      [15, 30, 60, 120].includes(privacyClearSeconds)
+        ? privacyClearSeconds
+        : defaultMonitorSettings.privacyClearSeconds
+    ) * 1000;
+    screensaverSettings = {
+      enabled: Boolean(settings.screensaver?.enabled),
+      idleSeconds: [30, 60, 120, 300, 600].includes(screensaverIdleSeconds)
+        ? screensaverIdleSeconds
+        : defaultMonitorSettings.screensaver.idleSeconds,
+      message: settings.screensaver?.message || defaultMonitorSettings.screensaver.message,
+      imageUrl: settings.screensaver?.image_url || null
+    };
+  } catch {
+    accountTimeoutMilliseconds = defaultMonitorSettings.privacyClearSeconds * 1000;
+    screensaverSettings = { ...defaultMonitorSettings.screensaver };
+  } finally {
+    scheduleScreensaver();
+  }
+};
 
 const updateFullscreenPrompt = () => {
   fullscreenPrompt.hidden = !activePairing || Boolean(document.fullscreenElement);
@@ -206,10 +299,13 @@ const showAccountMode = () => {
   monitorModeLabel.textContent = 'Consulta de conta';
   renderPairingState();
   returnToInitialAccountScreen();
+  scheduleScreensaver();
 };
 
 const showSaleMode = () => {
   currentMode = 'COMPRA_EM_ANDAMENTO';
+  clearScreensaverTimeout();
+  hideScreensaver();
   clearSensitiveAccountData();
   showAccountMessage();
   accountScreen.hidden = true;
@@ -333,6 +429,8 @@ const disconnectMonitor = (message = 'Monitor desconectado.', isError = true) =>
   closeMonitorEvents();
   clearStoredPairing();
   activePairing = null;
+  clearScreensaverTimeout();
+  hideScreensaver();
   updateFullscreenPrompt();
   showAccountMode();
   renderPairingState();
@@ -346,6 +444,7 @@ const connectMonitorEvents = (pairing) => {
   savePairing(pairing);
   renderPairingState();
   updateFullscreenPrompt();
+  scheduleScreensaver();
   showPairingMessage(`Monitor vinculado ao ${pairing.terminal}.`);
   const params = new URLSearchParams({ token: pairing.token });
   monitorEvents = new EventSource(`/api/v1/monitor/events?${params.toString()}`);
@@ -500,8 +599,12 @@ cpfKeypad.addEventListener('click', (event) => {
 
 clearAccountButton.addEventListener('click', returnToInitialAccountScreen);
 
-document.addEventListener('pointerdown', scheduleAccountExpiration);
-document.addEventListener('keydown', scheduleAccountExpiration);
+monitorScreensaverImage.addEventListener('error', () => {
+  monitorScreensaverImage.hidden = true;
+});
+
+document.addEventListener('pointerdown', handleMonitorActivity, true);
+document.addEventListener('keydown', handleMonitorActivity, true);
 
 const updateClock = () => {
   const now = new Date();
@@ -516,4 +619,5 @@ updateClock();
 setInterval(updateClock, 1000);
 showAccountMode();
 updateFullscreenPrompt();
+void loadMonitorSettings();
 void restoreStoredPairing();

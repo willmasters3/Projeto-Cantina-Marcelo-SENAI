@@ -28,6 +28,23 @@ const configureNavigation = (roleSlug) => {
   });
 };
 
+const showAccessDeniedNotice = () => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('accessDenied') !== '1') return;
+
+  const notice = document.createElement('div');
+  notice.className = 'access-denied-notice';
+  notice.setAttribute('role', 'alert');
+  notice.textContent = 'Você não tem permissão para acessar essa área. Você foi redirecionado para o Caixa.';
+  document.body.appendChild(notice);
+
+  params.delete('accessDenied');
+  const query = params.toString();
+  const cleanUrl = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
+  window.history.replaceState({}, '', cleanUrl);
+  setTimeout(() => notice.remove(), 7000);
+};
+
 const createLogoutConfirmation = () => {
   const dialog = document.createElement('dialog');
   dialog.className = 'logout-confirmation-modal';
@@ -100,6 +117,7 @@ const initHeader = async () => {
       : `${user.nome} · ${user.role.nome}`;
     currentRoleSlug = user.role.slug;
     configureNavigation(user.role.slug);
+    showAccessDeniedNotice();
     logoutButton.disabled = false;
   } catch (error) {
     window.location.href = '/login';

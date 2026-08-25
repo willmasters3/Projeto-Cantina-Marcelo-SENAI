@@ -171,6 +171,18 @@ const getState = (terminalValue = terminalCode) => {
   return terminalStates.get(terminal) || idleState(terminal);
 };
 
+const getRuntimeInfo = (terminalValue = terminalCode) => {
+  const terminal = normalizeTerminal(terminalValue);
+  const state = getState(terminal);
+  return {
+    terminal,
+    monitor_conectado: activeMonitorByTerminal.has(terminal),
+    chave_ativa: pairingTokenByTerminal.has(terminal),
+    estado_atual: state.status,
+    atualizado_em: state.atualizado_em
+  };
+};
+
 const subscribe = (terminalValue, listener) => {
   const terminal = normalizeTerminal(terminalValue);
   const listeners = listenersByTerminal.get(terminal) || new Set();
@@ -289,6 +301,7 @@ const resetForTests = () => {
 export default {
   confirmPairing,
   createPairingToken,
+  getRuntimeInfo,
   getState,
   normalizePairingToken,
   normalizeTerminal,

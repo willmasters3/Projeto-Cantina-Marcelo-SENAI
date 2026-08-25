@@ -27,8 +27,26 @@ const invalidateSession = async (tokenHash) => {
   );
 };
 
+const invalidateUserSessions = async (userId, { exceptTokenHash = null } = {}, executor = pool) => {
+  const parameters = [userId];
+  let exceptionClause = '';
+  if (exceptTokenHash) {
+    exceptionClause = ' AND token_hash <> ?';
+    parameters.push(exceptTokenHash);
+  }
+
+  await executor.query(
+    `UPDATE auth_sessions
+     SET invalidated_at = CURRENT_TIMESTAMP
+     WHERE user_id = ?
+       AND invalidated_at IS NULL${exceptionClause}`,
+    parameters
+  );
+};
+
 export default {
   createSession,
   findByTokenHash,
-  invalidateSession
+  invalidateSession,
+  invalidateUserSessions
 };

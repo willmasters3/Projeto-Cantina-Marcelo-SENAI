@@ -29,15 +29,442 @@
         <button id="logoutButton">Sair</button>
       </header>
 
-      <section class="page-content">
+      <section class="page-content settings-page" id="settingsPage">
         <h1>Configurações</h1>
-        <div class="module-placeholder">
-          <h2>Módulo em desenvolvimento</h2>
-          <p>As configurações serão implementadas em uma próxima etapa.</p>
+        <p id="settingsMessage" class="message" aria-live="polite"></p>
+
+        <div class="settings-summary-grid" aria-label="Resumo das configurações">
+          <article class="settings-summary-card">
+            <span class="settings-summary-icon blue" aria-hidden="true">U</span>
+            <div>
+              <span>Usuários ativos</span>
+              <strong id="summaryActiveUsers">--</strong>
+              <small>Equipe interna</small>
+            </div>
+          </article>
+          <article class="settings-summary-card">
+            <span class="settings-summary-icon green" aria-hidden="true">A</span>
+            <div>
+              <span>Administradores</span>
+              <strong id="summaryAdmins">--</strong>
+              <small>Com acesso total</small>
+            </div>
+          </article>
+          <article class="settings-summary-card">
+            <span class="settings-summary-icon blue" aria-hidden="true">T</span>
+            <div>
+              <span>Terminal atual</span>
+              <strong id="summaryTerminal">--</strong>
+              <small id="summaryTerminalStatus">Carregando...</small>
+            </div>
+          </article>
+          <article class="settings-summary-card">
+            <span class="settings-summary-icon gray" aria-hidden="true">B</span>
+            <div>
+              <span>Último backup</span>
+              <strong id="summaryBackupStatus">--</strong>
+              <small id="summaryBackupDate">Nenhum registro</small>
+            </div>
+          </article>
         </div>
+
+        <div class="settings-tabs" role="tablist" aria-label="Áreas de configuração">
+          <button id="usersTab" class="active" type="button" role="tab" aria-selected="true" data-settings-tab="usersPanel">
+            Usuários e permissões
+          </button>
+          <button id="terminalTab" type="button" role="tab" aria-selected="false" data-settings-tab="terminalPanel">
+            Terminal e monitor
+          </button>
+          <button id="securityTab" type="button" role="tab" aria-selected="false" data-settings-tab="securityPanel">
+            Segurança e backup
+          </button>
+        </div>
+
+        <section id="usersPanel" class="settings-tab-panel active" role="tabpanel" aria-labelledby="usersTab">
+          <div class="settings-panel">
+            <div class="settings-panel-header">
+              <div>
+                <h2>Usuários internos</h2>
+                <p>Gerencie administradores e operadores de caixa sem misturar com clientes da cantina.</p>
+              </div>
+              <button id="addUserButton" type="button">Adicionar usuário</button>
+            </div>
+
+            <form id="userFilters" class="settings-toolbar">
+              <input id="userSearch" type="search" placeholder="Pesquisar por nome ou login" autocomplete="off" />
+              <select id="userRoleFilter" aria-label="Filtrar por perfil">
+                <option value="">Todos os perfis</option>
+              </select>
+              <select id="userStatusFilter" aria-label="Filtrar por status">
+                <option value="all">Todos os status</option>
+                <option value="active">Ativos</option>
+                <option value="inactive">Inativos</option>
+              </select>
+              <button class="secondary-action" type="submit">Buscar</button>
+            </form>
+
+            <div class="settings-table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Nome</th>
+                    <th scope="col">Login</th>
+                    <th scope="col">Perfil</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Último acesso</th>
+                    <th scope="col">Criado em</th>
+                    <th scope="col">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTable">
+                  <tr>
+                    <td colspan="7">Carregando usuários...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="terminalPanel" class="settings-tab-panel" role="tabpanel" aria-labelledby="terminalTab" hidden>
+          <div class="settings-two-column">
+            <section class="settings-panel" aria-labelledby="terminalTitle">
+              <div class="settings-panel-header">
+                <div>
+                  <h2 id="terminalTitle">Terminal</h2>
+                  <p>Identificação do caixa e estado de vinculação com o monitor.</p>
+                </div>
+              </div>
+
+              <div class="terminal-status-grid">
+                <div class="terminal-status-card">
+                  <span>Terminal</span>
+                  <strong id="terminalDisplay">--</strong>
+                  <small id="terminalCode">CAIXA-01</small>
+                </div>
+                <div class="terminal-status-card">
+                  <span>Situação do terminal</span>
+                  <strong id="terminalStatus">--</strong>
+                  <small id="terminalOpenAt">Sem caixa aberto</small>
+                </div>
+                <div class="terminal-status-card">
+                  <span>Monitor vinculado</span>
+                  <strong id="monitorLinked">--</strong>
+                  <small id="monitorStatus">Aguardando informação</small>
+                </div>
+              </div>
+
+              <form id="terminalForm" class="settings-form">
+                <label for="terminalDisplayName">Nome de exibição do terminal</label>
+                <input id="terminalDisplayName" type="text" autocomplete="off" maxlength="50" required />
+                <p class="field-help">O código técnico de vinculação permanece compatível com o caixa atual.</p>
+                <div class="form-actions">
+                  <button id="terminalSaveButton" type="submit">Salvar terminal</button>
+                  <button id="openMonitorPageButton" class="secondary-action" type="button">Abrir tela da cantina</button>
+                  <button id="previewScreensaverButton" class="secondary-action" type="button">Pré-visualizar protetor</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="settings-panel" aria-labelledby="screensaverTitle">
+              <div class="settings-panel-header">
+                <div>
+                  <h2 id="screensaverTitle">Protetor da consulta</h2>
+                  <p>Imagem, mensagem e privacidade aplicadas na página pública de consulta.</p>
+                </div>
+              </div>
+
+              <form id="monitorSettingsForm" class="settings-form">
+                <label class="settings-check">
+                  <input id="screensaverEnabled" type="checkbox" />
+                  <span>Ativar protetor de tela por inatividade</span>
+                </label>
+
+                <label for="screensaverIdleSeconds">Tempo de inatividade</label>
+                <select id="screensaverIdleSeconds">
+                  <option value="30">30 segundos</option>
+                  <option value="60">1 minuto</option>
+                  <option value="120">2 minutos</option>
+                  <option value="300">5 minutos</option>
+                  <option value="600">10 minutos</option>
+                </select>
+
+                <label for="privacyClearSeconds">Apagar dados da consulta após</label>
+                <select id="privacyClearSeconds">
+                  <option value="15">15 segundos</option>
+                  <option value="30">30 segundos</option>
+                  <option value="60">60 segundos</option>
+                  <option value="120">120 segundos</option>
+                </select>
+
+                <label for="screensaverMessage">Mensagem exibida no protetor</label>
+                <input id="screensaverMessage" type="text" maxlength="120" required />
+
+                <section class="screensaver-image-field" aria-labelledby="screensaverImageTitle">
+                  <div>
+                    <h3 id="screensaverImageTitle">Imagem personalizada</h3>
+                    <p>JPEG, PNG ou WebP de até 5 MB. Recomendação: 1920 x 1080 em 16:9.</p>
+                  </div>
+                  <div class="screensaver-image-editor">
+                    <div class="screensaver-image-preview" id="screensaverImagePreview">
+                      <img id="screensaverPreviewImage" alt="Prévia do protetor de tela" hidden />
+                      <span id="screensaverDefaultPreview">Visual padrão</span>
+                    </div>
+                    <div class="screensaver-image-actions">
+                      <input
+                        id="screensaverImageInput"
+                        class="settings-file-input"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                      />
+                      <button id="chooseScreensaverImageButton" class="secondary-action" type="button">
+                        Selecionar imagem
+                      </button>
+                      <button id="uploadScreensaverImageButton" type="button" disabled>
+                        Enviar imagem
+                      </button>
+                      <button id="removeScreensaverImageButton" class="danger-action" type="button" hidden>
+                        Remover imagem
+                      </button>
+                      <p id="screensaverImageMessage" class="field-help" aria-live="polite"></p>
+                    </div>
+                  </div>
+                </section>
+
+                <div class="form-actions">
+                  <button id="monitorSaveButton" type="submit">Salvar configurações</button>
+                </div>
+              </form>
+            </section>
+          </div>
+        </section>
+
+        <section id="securityPanel" class="settings-tab-panel" role="tabpanel" aria-labelledby="securityTab" hidden>
+          <div class="settings-two-column security-grid">
+            <section class="settings-panel" aria-labelledby="passwordTitle">
+              <div class="settings-panel-header">
+                <div>
+                  <h2 id="passwordTitle">Minha senha</h2>
+                  <p>Altere sua senha administrativa mantendo a sessão atual protegida.</p>
+                </div>
+              </div>
+
+              <form id="passwordForm" class="settings-form">
+                <label for="currentPassword">Senha atual</label>
+                <input id="currentPassword" type="password" autocomplete="current-password" required />
+                <label for="newPassword">Nova senha</label>
+                <input id="newPassword" type="password" autocomplete="new-password" minlength="8" required />
+                <label for="confirmNewPassword">Confirmar nova senha</label>
+                <input id="confirmNewPassword" type="password" autocomplete="new-password" minlength="8" required />
+                <button id="passwordSaveButton" type="submit">Alterar senha</button>
+              </form>
+            </section>
+
+            <section class="settings-panel" aria-labelledby="systemInfoTitle">
+              <div class="settings-panel-header">
+                <div>
+                  <h2 id="systemInfoTitle">Sistema</h2>
+                  <p>Informações operacionais sem dados sensíveis.</p>
+                </div>
+              </div>
+              <dl class="system-info-list">
+                <div><dt>Versão</dt><dd id="systemVersion">--</dd></div>
+                <div><dt>Banco de dados</dt><dd id="databaseStatus">--</dd></div>
+                <div><dt>Terminal</dt><dd id="systemTerminal">--</dd></div>
+                <div><dt>Último backup</dt><dd id="systemLastBackup">--</dd></div>
+                <div><dt>Backup automático</dt><dd id="systemAutoBackup">--</dd></div>
+              </dl>
+            </section>
+          </div>
+
+          <section class="settings-panel backup-panel" aria-labelledby="backupTitle">
+            <div class="settings-panel-header">
+              <div>
+                <h2 id="backupTitle">Backup manual e automático</h2>
+                <p>Gere, baixe, exclua e restaure backups SQL do banco MySQL.</p>
+              </div>
+              <button id="generateBackupButton" type="button">Gerar backup agora</button>
+            </div>
+
+            <form id="autoBackupForm" class="settings-toolbar">
+              <label class="settings-check">
+                <input id="autoBackupEnabled" type="checkbox" />
+                <span>Backup automático diário</span>
+              </label>
+              <select id="autoBackupTime" aria-label="Horário do backup automático">
+                <option value="18:00">18:00</option>
+                <option value="20:00">20:00</option>
+                <option value="22:00">22:00</option>
+                <option value="23:00">23:00</option>
+              </select>
+              <select id="backupRetentionDays" aria-label="Retenção dos backups">
+                <option value="7">7 dias</option>
+                <option value="15">15 dias</option>
+                <option value="30">30 dias</option>
+              </select>
+              <button id="autoBackupSaveButton" class="secondary-action" type="submit">Salvar automação</button>
+              <span id="nextBackupText" class="settings-inline-status">Próximo backup: --</span>
+            </form>
+
+            <div class="restore-grid">
+              <form id="restoreExistingForm" class="restore-card">
+                <h3>Restaurar backup existente</h3>
+                <label for="restoreBackupSelect">Arquivo disponível</label>
+                <select id="restoreBackupSelect" required></select>
+                <label for="restoreConfirmation">Confirmação</label>
+                <input id="restoreConfirmation" type="text" placeholder="Digite RESTAURAR" autocomplete="off" required />
+                <button id="restoreExistingButton" class="danger-action" type="submit">Restaurar selecionado</button>
+              </form>
+
+              <form id="restoreUploadForm" class="restore-card">
+                <h3>Restaurar arquivo enviado</h3>
+                <label for="restoreUploadInput">Arquivo SQL</label>
+                <input id="restoreUploadInput" type="file" accept=".sql,application/sql,text/plain" required />
+                <label for="restoreUploadConfirmation">Confirmação</label>
+                <input id="restoreUploadConfirmation" type="text" placeholder="Digite RESTAURAR" autocomplete="off" required />
+                <button id="restoreUploadButton" class="danger-action" type="submit">Enviar e restaurar</button>
+              </form>
+            </div>
+
+            <div class="settings-table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Arquivo</th>
+                    <th scope="col">Tipo</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Data</th>
+                    <th scope="col">Tamanho</th>
+                    <th scope="col">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="backupsTable">
+                  <tr>
+                    <td colspan="6">Carregando backups...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="settings-panel" aria-labelledby="auditTitle">
+            <div class="settings-panel-header">
+              <div>
+                <h2 id="auditTitle">Atividades administrativas recentes</h2>
+                <p>Auditoria resumida das alterações feitas por administradores.</p>
+              </div>
+            </div>
+            <div class="settings-table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Data</th>
+                    <th scope="col">Usuário</th>
+                    <th scope="col">Ação</th>
+                    <th scope="col">Resultado</th>
+                  </tr>
+                </thead>
+                <tbody id="auditTable">
+                  <tr>
+                    <td colspan="4">Carregando atividades...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="settings-pagination">
+              <button id="auditPrevButton" class="secondary-action compact-button" type="button">Anterior</button>
+              <span id="auditPaginationInfo">Página 1</span>
+              <button id="auditNextButton" class="secondary-action compact-button" type="button">Próxima</button>
+            </div>
+          </section>
+        </section>
       </section>
+
+      <dialog id="userDialog" class="settings-dialog">
+        <form id="userForm" method="dialog" class="settings-dialog-content">
+          <div class="dialog-header">
+            <div>
+              <h2 id="userDialogTitle">Adicionar usuário</h2>
+              <p>Usuário interno com acesso ao sistema.</p>
+            </div>
+            <button class="icon-close-button" type="button" data-close-dialog="userDialog">Fechar</button>
+          </div>
+          <input id="userId" type="hidden" />
+          <label for="userNameInput">Nome completo</label>
+          <input id="userNameInput" type="text" autocomplete="off" maxlength="150" required />
+          <label for="userLoginInput">Login</label>
+          <input id="userLoginInput" type="text" autocomplete="off" maxlength="255" required />
+          <label for="userRoleInput">Perfil</label>
+          <select id="userRoleInput" required></select>
+          <label id="userActiveLabel" class="settings-check">
+            <input id="userActiveInput" type="checkbox" checked />
+            <span>Status inicial ativo</span>
+          </label>
+          <div id="userPasswordFields">
+            <label for="userPasswordInput">Senha</label>
+            <input id="userPasswordInput" type="password" autocomplete="new-password" minlength="8" />
+            <label for="userPasswordConfirmInput">Confirmar senha</label>
+            <input id="userPasswordConfirmInput" type="password" autocomplete="new-password" minlength="8" />
+          </div>
+          <div class="dialog-actions">
+            <button class="secondary-action" type="button" data-close-dialog="userDialog">Cancelar</button>
+            <button id="userSaveButton" type="submit">Salvar usuário</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="resetPasswordDialog" class="settings-dialog">
+        <form id="resetPasswordForm" method="dialog" class="settings-dialog-content">
+          <div class="dialog-header">
+            <div>
+              <h2>Redefinir senha</h2>
+              <p id="resetPasswordUserLabel">As sessões ativas serão encerradas.</p>
+            </div>
+            <button class="icon-close-button" type="button" data-close-dialog="resetPasswordDialog">Fechar</button>
+          </div>
+          <input id="resetPasswordUserId" type="hidden" />
+          <label for="resetPasswordInput">Nova senha</label>
+          <input id="resetPasswordInput" type="password" autocomplete="new-password" minlength="8" required />
+          <label for="resetPasswordConfirmInput">Confirmar nova senha</label>
+          <input id="resetPasswordConfirmInput" type="password" autocomplete="new-password" minlength="8" required />
+          <div class="dialog-actions">
+            <button class="secondary-action" type="button" data-close-dialog="resetPasswordDialog">Cancelar</button>
+            <button id="resetPasswordSaveButton" type="submit">Redefinir senha</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="confirmDialog" class="settings-dialog confirm-dialog">
+        <form id="confirmForm" method="dialog" class="settings-dialog-content">
+          <div class="dialog-header">
+            <div>
+              <h2 id="confirmTitle">Confirmar ação</h2>
+              <p id="confirmMessage"></p>
+            </div>
+          </div>
+          <div id="confirmTextField" hidden>
+            <label for="confirmTextInput" id="confirmTextLabel">Confirmação</label>
+            <input id="confirmTextInput" type="text" autocomplete="off" />
+          </div>
+          <div class="dialog-actions">
+            <button id="confirmCancelButton" class="secondary-action" type="button">Cancelar</button>
+            <button id="confirmSubmitButton" type="submit">Confirmar</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="screensaverPreviewDialog" class="screensaver-preview-dialog">
+        <div class="screensaver-preview-content">
+          <button id="closeScreensaverPreviewButton" class="icon-close-button" type="button">Fechar</button>
+          <img id="screensaverPreviewDialogImage" alt="Imagem do protetor de tela" hidden />
+          <div class="screensaver-preview-message">
+            <strong id="screensaverPreviewDialogMessage">Toque na tela para consultar sua conta</strong>
+          </div>
+        </div>
+      </dialog>
     </div>
   </div>
   <script type="module" src="../js/appLayout.js"></script>
+  <script type="module" src="../js/settingsApp.js"></script>
 </body>
 </html>

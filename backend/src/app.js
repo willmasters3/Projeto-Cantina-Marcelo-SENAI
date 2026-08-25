@@ -18,6 +18,7 @@ import stockRoutes from './routes/stockRoutes.js';
 import suppliersRoutes from './routes/suppliersRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';
 import monitorRoutes from './routes/monitorRoutes.js';
+import settingsRoutes from './routes/settingsRoutes.js';
 import cookieMiddleware from './middlewares/cookieMiddleware.js';
 import notFoundMiddleware from './middlewares/notFoundMiddleware.js';
 import errorHandlerMiddleware from './middlewares/errorHandlerMiddleware.js';
@@ -86,6 +87,7 @@ app.use('/api/v1/reports', reportsRoutes);
 app.use('/api/v1/stock', stockRoutes);
 app.use('/api/v1/suppliers', suppliersRoutes);
 app.use('/api/v1/clients', clientsRoutes);
+app.use('/api/v1/settings', settingsRoutes);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);

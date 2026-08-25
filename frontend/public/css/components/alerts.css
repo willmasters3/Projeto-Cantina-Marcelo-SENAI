@@ -10,3 +10,26 @@
 .message.success {
   color: var(--color-success);
 }
+
+.access-denied-notice {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  z-index: 50;
+  max-width: min(calc(100% - 2rem), 420px);
+  padding: var(--space-4) var(--space-5);
+  border: var(--border-width) solid var(--color-info-border);
+  border-radius: var(--radius-md);
+  background: var(--color-info-surface);
+  color: var(--color-info-text);
+  box-shadow: var(--shadow-container);
+  font-weight: 700;
+}
+
+@media (max-width: 620px) {
+  .access-denied-notice {
+    right: var(--space-4);
+    bottom: var(--space-4);
+    left: var(--space-4);
+  }
+}

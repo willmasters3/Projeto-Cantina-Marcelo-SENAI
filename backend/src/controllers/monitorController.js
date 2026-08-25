@@ -1,5 +1,15 @@
 import monitorAccountService from '../services/monitorAccountService.js';
 import monitorStateService from '../services/monitorStateService.js';
+import settingsService from '../services/settingsService.js';
+
+const getSettings = async (req, res, next) => {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(200).json({ data: await settingsService.getPublicMonitorSettings() });
+  } catch (error) {
+    next(error);
+  }
+};
 
 const getAccount = async (req, res, next) => {
   try {
@@ -80,4 +90,4 @@ const streamState = (req, res, next) => {
   });
 };
 
-export default { getAccount, pairMonitor, streamState, updateState };
+export default { getAccount, getSettings, pairMonitor, streamState, updateState };

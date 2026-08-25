@@ -31,6 +31,12 @@ const requireAuth = async (req, res, next) => {
 const requireRole = (allowedRoles = [], forbiddenMessage = 'Permissão negada') => {
   return (req, res, next) => {
     if (!req.user || !allowedRoles.includes(req.user.role.slug)) {
+      if (
+        req.originalUrl.startsWith('/app')
+        && req.user?.role?.slug === authConfig.roles.cashier
+      ) {
+        return res.redirect('/app/caixa?accessDenied=1');
+      }
       return next(new HttpError(403, forbiddenMessage));
     }
     return next();

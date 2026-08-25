@@ -9,6 +9,9 @@ import HttpError from '../utils/httpError.js';
 const createLoginToken = () => crypto.randomBytes(32).toString('hex');
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 const dummyPasswordHash = '$2b$12$Z8Y1kT1qJqQxV5QpY8qkI.2an6rUoMZfV8I2ZmdoYwXr6vFYViYxK';
+const hashPassword = (password) => bcrypt.hash(password, 12);
+const verifyPassword = (password, passwordHash) => bcrypt.compare(password, passwordHash);
+const getSessionTokenHash = (token) => hashToken(token);
 
 const toPublicUser = (user) => ({
   id: user.id,
@@ -22,7 +25,7 @@ const toPublicUser = (user) => ({
 
 const validateCredentialsInput = (email, password) => {
   if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
-    throw new HttpError(400, 'E-mail e senha são obrigatórios');
+    throw new HttpError(400, 'Login e senha são obrigatórios');
   }
 };
 
@@ -106,4 +109,12 @@ const getUserBySessionToken = async (token) => {
   return toPublicUser(user);
 };
 
-export default { login, logout, getUserBySessionToken };
+export default {
+  getSessionTokenHash,
+  getUserBySessionToken,
+  hashPassword,
+  login,
+  logout,
+  toPublicUser,
+  verifyPassword
+};
