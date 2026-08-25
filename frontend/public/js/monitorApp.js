@@ -43,6 +43,18 @@ let currentMode = 'CONSULTA';
 let monitorEvents = null;
 let activePairing = null;
 
+const isEditableTarget = (target) => target instanceof Element
+  && Boolean(target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])'));
+
+document.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+});
+
+document.addEventListener('selectstart', (event) => {
+  if (isEditableTarget(event.target)) return;
+  event.preventDefault();
+});
+
 const updateFullscreenPrompt = () => {
   fullscreenPrompt.hidden = !activePairing || Boolean(document.fullscreenElement);
 };
