@@ -5,6 +5,7 @@ const userName = document.getElementById('userName');
 const logoutButton = document.getElementById('logoutButton');
 const navLinks = document.querySelectorAll('.side-menu a');
 const cashRoles = new Set(['ADMINISTRADOR', 'OPERADOR_CAIXA']);
+const cashierRole = 'OPERADOR_CAIXA';
 let currentRoleSlug = null;
 let logoutInProgress = false;
 
@@ -19,13 +20,188 @@ const permissionsByPath = {
   '/app/configuracoes': ['ADMINISTRADOR']
 };
 
+const navigationIcons = {
+  '/app/caixa': {
+    paths: ['M3 6h18v12H3zM7 10h6M7 14h4M17 10h.01M17 14h.01']
+  },
+  '/app/produtos': {
+    paths: ['M4 7.5 12 3l8 4.5v9L12 21l-8-4.5zM4 7.5l8 4.5 8-4.5M12 12v9']
+  },
+  '/app/categorias': {
+    paths: ['M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v4H4zM14 15h6v4h-6z']
+  },
+  '/app/estoque': {
+    paths: ['M4 8h16v12H4zM7 4h10l3 4H4zM9 12h6']
+  },
+  '/app/clientes': {
+    circles: [{ cx: 12, cy: 8, r: 3 }],
+    paths: ['M5 20c.5-4 2.8-6 7-6s6.5 2 7 6']
+  },
+  '/app/fiado': {
+    paths: ['M5 4h14v16H5zM8 8h8M8 12h8M8 16h5']
+  },
+  '/app/relatorios': {
+    paths: ['M5 20V10M12 20V4M19 20v-7']
+  },
+  '/app/configuracoes': {
+    circles: [{ cx: 12, cy: 12, r: 3 }],
+    paths: ['M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4']
+  }
+};
+
+const brandIcon = {
+  paths: ['M3 4h2l2.2 10.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 1.9-1.4L21 8H7'],
+  circles: [
+    { cx: 10, cy: 19, r: 1.4 },
+    { cx: 18, cy: 19, r: 1.4 }
+  ]
+};
+
+const createSvgIcon = ({ paths = [], circles = [] }) => {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+
+  paths.forEach((pathData) => {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', pathData);
+    svg.appendChild(path);
+  });
+
+  circles.forEach((circleData) => {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', circleData.cx);
+    circle.setAttribute('cy', circleData.cy);
+    circle.setAttribute('r', circleData.r);
+    svg.appendChild(circle);
+  });
+
+  return svg;
+};
+
 const configureNavigation = (roleSlug) => {
   navLinks.forEach((link) => {
     const path = new URL(link.href).pathname;
     const allowedRoles = permissionsByPath[path] || [];
     link.hidden = !allowedRoles.includes(roleSlug);
-    link.classList.toggle('active', path === window.location.pathname);
+    const isActive = path === window.location.pathname;
+    link.classList.toggle('active', isActive);
+    if (isActive) {
+      link.setAttribute('aria-current', 'page');
+    } else {
+      link.removeAttribute('aria-current');
+    }
   });
+};
+
+const ensureOperatorNavigationIcons = () => {
+  navLinks.forEach((link) => {
+    if (link.querySelector('svg')) return;
+    const path = new URL(link.href).pathname;
+    const label = link.textContent.trim();
+    const labelElement = document.createElement('span');
+    labelElement.textContent = label;
+    link.replaceChildren(createSvgIcon(navigationIcons[path] || navigationIcons['/app/caixa']), labelElement);
+  });
+};
+
+const ensureOperatorBrand = (sideMenu) => {
+  const brand = sideMenu.querySelector('.brand');
+  if (!brand || brand.querySelector('svg')) return;
+
+  const label = document.createElement('span');
+  label.textContent = brand.textContent.trim() || 'Cantina';
+  const mark = document.createElement('span');
+  mark.className = 'operator-brand-mark';
+  mark.appendChild(createSvgIcon(brandIcon));
+  brand.classList.add('operator-brand');
+  brand.replaceChildren(mark, label);
+};
+
+const createOperatorTerminalCard = (sideMenu, user) => {
+  if (sideMenu.querySelector('.operator-terminal-card, .cash-terminal-card')) return;
+
+  const card = document.createElement('section');
+  card.className = 'operator-terminal-card';
+  card.setAttribute('aria-label', 'Terminal de caixa');
+
+  const labelRow = document.createElement('div');
+  labelRow.className = 'operator-terminal-label';
+  const label = document.createElement('span');
+  label.textContent = 'Terminal atual';
+  const dot = document.createElement('span');
+  dot.className = 'operator-terminal-dot';
+  dot.setAttribute('aria-hidden', 'true');
+  labelRow.append(label, dot);
+
+  const terminal = document.createElement('strong');
+  terminal.dataset.operatorTerminalCode = 'true';
+  terminal.textContent = 'CAIXA-01';
+
+  const operator = document.createElement('div');
+  operator.className = 'operator-terminal-operator';
+  const avatar = document.createElement('span');
+  avatar.className = 'operator-avatar';
+  avatar.setAttribute('aria-hidden', 'true');
+  avatar.appendChild(createSvgIcon(navigationIcons['/app/clientes']));
+  const operatorText = document.createElement('div');
+  const operatorName = document.createElement('span');
+  operatorName.dataset.operatorName = 'true';
+  operatorName.textContent = user.nome || 'Usuário logado';
+  const operatorStatus = document.createElement('small');
+  operatorStatus.dataset.operatorStatus = 'true';
+  operatorStatus.textContent = 'Aguardando abertura';
+  operatorText.append(operatorName, operatorStatus);
+  operator.append(avatar, operatorText);
+
+  card.append(labelRow, terminal, operator);
+  sideMenu.appendChild(card);
+};
+
+const refreshOperatorTerminalCard = async () => {
+  const card = document.querySelector('.operator-terminal-card');
+  if (!card) return;
+
+  try {
+    const session = await cashApi.getCurrentSession();
+    const terminal = card.querySelector('[data-operator-terminal-code]');
+    const operatorName = card.querySelector('[data-operator-name]');
+    const operatorStatus = card.querySelector('[data-operator-status]');
+    const isOpen = Boolean(session);
+    card.classList.toggle('is-open', isOpen);
+
+    if (!isOpen) {
+      if (operatorStatus) operatorStatus.textContent = 'Aguardando abertura';
+      return;
+    }
+
+    if (terminal) terminal.textContent = session.terminal_codigo || 'CAIXA-01';
+    if (operatorName) operatorName.textContent = session.usuario_abertura_nome || operatorName.textContent;
+    const openedAt = new Date(session.aberto_em);
+    if (operatorStatus) {
+      operatorStatus.textContent = Number.isNaN(openedAt.getTime())
+        ? 'Caixa aberto'
+        : `Aberto às ${openedAt.toLocaleTimeString('pt-BR', {
+          hour: '2-digit',
+          minute: '2-digit'
+        })}`;
+    }
+  } catch {
+    card.classList.remove('is-open');
+  }
+};
+
+const configureOperatorShell = (user) => {
+  const isOperatorPage = user.role.slug === cashierRole && !document.body.classList.contains('cash-screen');
+  document.body.classList.toggle('operator-shell', isOperatorPage);
+  if (!isOperatorPage) return;
+
+  document.querySelectorAll('.side-menu').forEach((sideMenu) => {
+    ensureOperatorBrand(sideMenu);
+    createOperatorTerminalCard(sideMenu, user);
+  });
+  ensureOperatorNavigationIcons();
+  void refreshOperatorTerminalCard();
 };
 
 const showAccessDeniedNotice = () => {
@@ -117,6 +293,7 @@ const initHeader = async () => {
       : `${user.nome} · ${user.role.nome}`;
     currentRoleSlug = user.role.slug;
     configureNavigation(user.role.slug);
+    configureOperatorShell(user);
     showAccessDeniedNotice();
     logoutButton.disabled = false;
   } catch (error) {
