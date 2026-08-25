@@ -11,9 +11,9 @@
   background: #eef2f7;
 }
 
-.cash-page [hidden],
-.cash-sidebar [hidden] {
-  display: none;
+.cash-screen .cash-page [hidden],
+.cash-screen .cash-sidebar [hidden] {
+  display: none !important;
 }
 
 .cash-screen .admin-layout {
