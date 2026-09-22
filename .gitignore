@@ -1,7 +1,0 @@
-node_modules/
-.env
-senhas.txt
-database/backups/
-*.log
-backend/storage/products/*
-!backend/storage/products/.gitkeep
